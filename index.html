@@ -875,7 +875,7 @@ $('set-rows').addEventListener('change',commitSet);
 $('mat-rows').addEventListener('change',commitMats);
 $('q-date').addEventListener('change',e=>setAsOf(e.target.value));
 // 日付ホイール: 上へ回すと1日ずつ過去へ、下へ回すと現在へ
-const wheel=$('wheel'),TICK=5;
+const wheel=$('wheel'),TICK=8;
 const addDays=(d,n)=>{const t=new Date(d+'T00:00:00');t.setDate(t.getDate()+n);return ymd(t)};
 function earliest(){let mn='';S.people.forEach(p=>{(S.hist[p.id]||[]).forEach(x=>{if(!mn||x.d<mn)mn=x.d})});return mn}
 function wheelOff(){return S.asOf?Math.max(0,daysBetween(S.asOf,today())):0}
@@ -919,7 +919,7 @@ wheel.addEventListener('pointermove',ev=>{
 });
 const wend=ev=>{if(wd&&ev.pointerId===wd.pid){wd=null}};
 wheel.addEventListener('pointerup',wend);wheel.addEventListener('pointercancel',wend);
-wheel.addEventListener('wheel',ev=>{ev.preventDefault();wheelStep((ev.deltaY>0?1:-1)*Math.max(1,Math.round(Math.abs(ev.deltaY)/30)))},{passive:false});
+wheel.addEventListener('wheel',ev=>{ev.preventDefault();wheelStep((ev.deltaY>0?1:-1)*Math.max(1,Math.round(Math.abs(ev.deltaY)/60)))},{passive:false});
 wheel.addEventListener('keydown',ev=>{
   const m={ArrowDown:1,ArrowUp:-1,PageDown:7,PageUp:-7}[ev.key];
   if(m){ev.preventDefault();wheelStep(m)}
