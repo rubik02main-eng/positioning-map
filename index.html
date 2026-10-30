@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>人物ポジショニングマップ</title>
+<title>People Positioning Map</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#0b0b0c">
 <meta name="color-scheme" content="dark">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
-<meta name="apple-mobile-web-app-title" content="人物マップ">
+<meta name="apple-mobile-web-app-title" content="People Map">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <style>
 /* 黒を地に、グレーの濃淡で組む。オレンジ(OGAのnozzle)は選んだ人のハイライトにだけ使う。影は使わない。 */
@@ -144,16 +144,25 @@ dialog::backdrop{background:rgba(0,0,0,.65)}
 .arow{display:flex;gap:8px;align-items:center;border-top:1px solid var(--line);padding:10px 0}
 .arow .ai{flex:1;min-width:0}
 .arow .am{font-size:12px;color:var(--muted)}
+.search input[type=date]{background:var(--plot);border:1px solid var(--line);border-radius:2px;color:var(--ink);padding:6px 8px;font-size:13px;min-height:36px;color-scheme:dark}
+.search input[type=date]:focus{outline:none;border-color:var(--noz)}
+.asof{margin:0 6px 8px;padding:6px 10px;border:1px solid var(--noz);color:var(--noz-text);font-size:12px;border-radius:2px}
+.dv{display:flex;justify-content:space-between;align-items:baseline;padding:4px 0;font-size:13px}
+.dv b{font-size:22px;font-weight:300;color:var(--strong)}
+.dn{flex:1;font-size:20px;font-weight:500;color:var(--strong);letter-spacing:.06em}
+.dlg ul{margin:0 0 6px;padding-left:1.2em;font-size:13px}
+.dlg li{margin-bottom:4px}
 .hidden{display:none!important}
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="top">
-    <h1>人物ポジショニングマップ</h1>
+    <h1>People Positioning Map</h1>
     <div class="acts">
       <button class="btn main" id="b-add">＋ 人を追加</button>
       <button class="btn" id="b-png">画像を保存</button>
+      <button class="btn" id="b-help">使い方</button>
       <button class="btn hidden" id="b-arc">アーカイブ（<span id="arc-n">0</span>）</button>
       <button class="btn" id="b-set">設定</button>
     </div>
@@ -169,12 +178,16 @@ dialog::backdrop{background:rgba(0,0,0,.65)}
         <span class="lbl"><label class="sw"><input type="checkbox" id="t-trail" checked><span class="tr"></span>軌跡</label><button class="q" data-help="trail" aria-label="軌跡の説明">?</button></span>
       </div>
       <div class="search">
-        <input id="q-text" type="search" placeholder="名前・メモ・材料で検索" autocomplete="off" aria-label="検索">
+        <input id="q-text" type="search" placeholder="名前で検索（メモ・材料も対象）" autocomplete="off" aria-label="検索">
         <button class="btn hidden" id="q-clear">解除</button>
+        <label class="lbl2" for="q-date">日付で見る</label>
+        <input id="q-date" type="date" aria-label="この日付のマップを見る">
+        <button class="btn hidden" id="q-now">現在に戻す</button>
       </div>
       <div class="search" style="padding-top:0"><span class="lbl2">材料で絞る</span><div class="chips" id="q-chips"></div>
         <span class="seg hidden" id="q-mode"><button data-qmode="all">すべて</button><button data-qmode="any">どれか</button></span></div>
       <div class="found" id="q-found"></div>
+      <div class="asof hidden" id="asof"></div>
       <div id="map"></div>
       <p class="hint">点をドラッグすると位置を動かせます。点を押すと詳細が開きます。</p>
     </section>
@@ -186,6 +199,36 @@ dialog::backdrop{background:rgba(0,0,0,.65)}
   <h2 id="help-t"></h2>
   <div id="help-b"></div>
   <div class="acts"><button class="btn hidden" id="help-set">目安を変更する</button><button class="btn main" id="help-x">閉じる</button></div>
+</div></dialog>
+
+<dialog id="about"><div class="dlg">
+  <h2>使い方</h2>
+  <h3>このアプリについて</h3>
+  <ul>
+    <li>知り合いを「大切にしたい」（縦）と「大切にすべき」（横）の2つの軸（どちらも1〜100）で整理します。目的は、自分の気持ちの整理です。</li>
+    <li>点をドラッグすると位置を動かせます。点を押すと、詳細が開きます。</li>
+  </ul>
+  <h3>関係値強度と考える材料</h3>
+  <ul>
+    <li>関係値強度は、知り合い同士の関係の強さを0〜100で付けたものです。線の太さと濃さに出ます。目安は設定で変えられます。</li>
+    <li>考える材料は「大切にすべき」を考えるためのチェックです。数値は自動では変わりません。材料は設定で増減できます。</li>
+  </ul>
+  <h3>軌跡と日付で見る</h3>
+  <ul>
+    <li>軌跡は<b>1日ごとに1点</b>です。同じ日に何度動かしても、その日の最後の位置が残ります。間隔は設定で変えられます。</li>
+    <li>軌跡の点を消すときは、押したあとにもう一度押して確認します。</li>
+    <li>「日付で見る」で日付を選ぶと、その日の位置のマップを見られます（閲覧のみ）。関係値強度の線、メモ、材料は現在の値です。</li>
+  </ul>
+  <h3>アーカイブ</h3>
+  <ul>
+    <li>関係がなくなった人は削除せず、アーカイブします。マップや検索には出なくなりますが、画面上部の「アーカイブ」からいつでも戻せます。</li>
+  </ul>
+  <h3>データ</h3>
+  <ul>
+    <li>データは、この端末のブラウザの中だけに保存されます。外部へは送りません。</li>
+    <li>端末の故障や、ブラウザのデータ削除に備えて、設定から定期的にバックアップを書き出してください。</li>
+  </ul>
+  <div class="acts"><button class="btn main" id="about-x">閉じる</button></div>
 </div></dialog>
 
 <dialog id="arc"><div class="dlg">
@@ -206,7 +249,7 @@ dialog::backdrop{background:rgba(0,0,0,.65)}
   <div class="stl"><table><thead><tr><th>材料</th><th>説明</th><th></th></tr></thead><tbody id="mat-rows"></tbody></table></div>
   <div class="acts l"><button class="btn" id="mat-add">材料を追加</button></div>
   <h3>軌跡</h3>
-  <p>最後の点から下の期間以内に動かしたときは、新しい点を作らず、その点を上書きします。</p>
+  <p>軌跡は、初期設定では<b>1日ごとに1点</b>です。同じ日に何度動かしても、その日の最後の位置が残ります。間隔を変えるときは下で選びます。点を消すときは、必ず確認が出ます。</p>
   <div class="acts l"><select id="trail-gap" class="gt" style="width:auto" aria-label="記録の間隔"><option value="1">1日</option><option value="7">1週間</option><option value="30">1か月</option></select><button class="btn" id="s-trail">全員の軌跡を消す</button></div>
   <h3>データ(この端末の中だけに保存されています)</h3>
   <p>バックアップは、人・つながり・軌跡・目安をまとめた1つのファイルです。</p>
@@ -248,7 +291,7 @@ const cloneGuide=()=>DEF_GUIDE.map(g=>Object.assign({},g));
 
 /* ---------- 保存(データの出入りはここだけ。後でSupabaseに差し替える) ---------- */
 const KEY='positioning-map.v3',KEY_OLD='positioning-map.v2';
-const S={people:[],links:{},notes:{},hist:{},mats:cloneMats(),trailGap:1,qtext:'',qmats:[],qmode:'all',guide:cloneGuide(),showLinks:true,showTrail:true,sel:null};
+const S={people:[],links:{},notes:{},hist:{},mats:cloneMats(),trailGap:1,asOf:'',qtext:'',qmats:[],qmode:'all',guide:cloneGuide(),showLinks:true,showTrail:true,sel:null};
 let warned=false,LAST='';
 function snapshot(){return {v:3,people:S.people,links:S.links,notes:S.notes,hist:S.hist,mats:S.mats,trailGap:S.trailGap,guide:S.guide,showLinks:S.showLinks,showTrail:S.showTrail}}
 function persist(){
@@ -296,6 +339,18 @@ function restore(){
 const byId=id=>S.people.find(p=>p.id===id);
 const live=()=>S.people.filter(p=>!p.arch);
 const alive=id=>{const p=byId(id);return !!p&&!p.arch};
+// ある日付の時点の位置。その日以前の記録がなければ、まだ登場していない人
+function posAt(p){
+  if(!S.asOf)return {e:p.e,o:p.o};
+  let r=null;
+  (S.hist[p.id]||[]).forEach(x=>{if(x.d<=S.asOf)r=x});
+  return r?{e:r.e,o:r.o}:null;
+}
+function vis(){
+  if(!S.asOf)return live();
+  return S.people.filter(p=>posAt(p)&&(!p.arch||String(p.archAt)>S.asOf));
+}
+const vid=id=>vis().some(p=>p.id===id);
 const daysBetween=(a,b)=>Math.round((new Date(b+'T00:00:00')-new Date(a+'T00:00:00'))/864e5);
 const dn=p=>p.name||p.full||'名前なし';
 // 検索と材料の絞り込み。条件がなければnull、あれば該当する人のid集合
@@ -303,7 +358,7 @@ function matchSet(){
   const t=S.qtext.trim().toLowerCase(),ms=S.qmats.filter(id=>S.mats.some(m=>m.id===id));
   if(!t&&!ms.length)return null;
   const out=new Set();
-  live().forEach(p=>{
+  vis().forEach(p=>{
     if(t){
       const notes=Object.keys(S.notes).filter(k=>k.split('|').includes(p.id)).map(k=>S.notes[k]);
       const names=S.mats.filter(m=>p.mat[m.id]).map(m=>m.name);
@@ -349,7 +404,7 @@ function helpData(key,v){
    axisE:['縦軸：大切にしたい（1〜100）','<p>あなたの<b>気持ち</b>の強さです。損得は考えず、気持ちだけで付けます。</p><table><tr><th>値</th><th>目安</th></tr><tr><td>1</td><td>ほとんど意識しない</td></tr><tr><td>25</td><td>少し気になる</td></tr><tr><td>50</td><td>ふつうに好意がある</td></tr><tr><td>75</td><td>大切にしたい</td></tr><tr><td>100</td><td>何より大切にしたい</td></tr></table><p>マップの上にいるほど大きい値です。点をドラッグするか、詳細のスライダーで変えられます。</p>'],
    axisO:['横軸：大切にすべき（1〜100）','<p>「この縁を活かすべきか」の度合いです。気持ちとは別に付けます。</p><p>詳細の中に、考える材料のチェックがあります。チェックは数値を自動では変えません。材料は設定で増やしたり変えたりできます。</p><table>'+S.mats.map(m=>'<tr><td>□</td><td>'+esc(m.name)+'</td></tr>').join('')+'</table><p>マップの右にいるほど大きい値です。</p>'],
    links:['関係値強度','<p>知り合い同士の関係の強さを、あなたの主観で0〜100の数字にします。強いほど線が太く濃くなります。</p><p>0は「線なし」です。スイッチで、線をマップに出すかどうかを選べます。点を選ぶと、その人の線はオレンジになり、数字が付きます。</p>'],
-   trail:['軌跡','<p>大切にしたい・大切にすべきの位置が記録されます。最後の点から設定した期間（初期値は1日）以内の変更は、新しい点を作らず、その点を上書きします。</p><p>人を選ぶと、その人の点がいつどこへ動いたかを、矢印と移動した年月日で表示します。選んでいないときは、全員の軌跡を薄く表示します。</p><p>点は、詳細の「軌跡」の欄の「×」で1つずつ、「この人の軌跡を消す」でまとめて消せます。</p>']
+   trail:['軌跡','<p>大切にしたい・大切にすべきの位置が、<b>1日ごとに1点</b>記録されます。同じ日に何度動かしても、その日の最後の位置が残ります。間隔は設定で、1週間・1か月にも変えられます。</p><p>人を選ぶと、その人の点がいつどこへ動いたかを、矢印と移動した年月日で表示します。選んでいないときは、全員の軌跡を薄く表示します。</p><p>点は、詳細の「軌跡」の欄の「×」で1つずつ、「この人の軌跡を消す」でまとめて消せます。消すときは、押したあとにもう一度押して確認します。</p>']
   };
   if(key==='mat'){const m=S.mats.find(x=>x.id===v);return [m?m.name:'材料','<p>'+(m&&m.desc?esc(m.desc):'説明はまだありません。設定で書けます。')+'</p>','mats']}
   if(key==='strength'){
@@ -385,9 +440,10 @@ function buildSVG(o){
   const ml=k(40),mr=k(12),mt=top+k(12),mb=k(38),pw=W-ml-mr,ph=H-mt-mb;
   const px=v=>ml+(v-X0)/(X1-X0)*pw,py=v=>mt+(Y1-v)/(Y1-Y0)*ph;
   if(hits)LAY={W,H,px,py,ox:sx=>X0+(sx-ml)/pw*(X1-X0),ey:sy=>Y1-(sy-mt)/ph*(Y1-Y0)};
-  const off=offsets(live().map(p=>({id:p.id,e:p.e,o:p.o})));
-  const pos=id=>{const p=byId(id);return[px(p.o)+off[id][0]*s,py(p.e)+off[id][1]*s]};
-  const sel=S.sel&&alive(S.sel)?S.sel:null;
+  const V=vis(),PA={};V.forEach(p=>{PA[p.id]=posAt(p)});
+  const off=offsets(V.map(p=>({id:p.id,e:PA[p.id].e,o:PA[p.id].o})));
+  const pos=id=>[px(PA[id].o)+off[id][0]*s,py(PA[id].e)+off[id][1]*s];
+  const sel=S.sel&&PA[S.sel]?S.sel:null;
   const fm=matchSet();
   const halo=' stroke="'+pal.plot+'" stroke-width="'+f(k(3))+'" paint-order="stroke" stroke-linejoin="round"';
   const tx=(x,y,t,size,fill,extra)=>'<text x="'+f(x)+'" y="'+f(y)+'" font-size="'+f(k(size))+'" fill="'+fill+'" '+(extra||'')+'>'+t+'</text>';
@@ -409,7 +465,7 @@ function buildSVG(o){
   g+=tx(0,0,'大切にしたい →',11,pal.muted,'text-anchor="middle" letter-spacing="'+f(k(1))+'" transform="translate('+f(k(11))+' '+f(mt+ph/2)+') rotate(-90)"');
 
   if(sel){
-    const sp=byId(sel),gx=px(sp.o),gy=py(sp.e),dash=' stroke-dasharray="'+f(k(3))+' '+f(k(3))+'"';
+    const sp=PA[sel],gx=px(sp.o),gy=py(sp.e),dash=' stroke-dasharray="'+f(k(3))+' '+f(k(3))+'"';
     g+='<line x1="'+f(gx)+'" x2="'+f(gx)+'" y1="'+f(gy)+'" y2="'+f(mt+ph)+'" stroke="'+pal.noz+'" stroke-width="'+f(k(1))+'" opacity=".6"'+dash+'/>';
     g+='<line x1="'+f(ml)+'" x2="'+f(gx)+'" y1="'+f(gy)+'" y2="'+f(gy)+'" stroke="'+pal.noz+'" stroke-width="'+f(k(1))+'" opacity=".6"'+dash+'/>';
     g+=tx(gx,mt+ph-k(6),sp.o,11,pal.nozText,'text-anchor="middle" font-weight="500"'+halo);
@@ -419,7 +475,7 @@ function buildSVG(o){
     const mids=[];
     Object.keys(S.links).forEach(key=>{
       const v=S.links[key];if(!v)return;
-      const [a,b]=key.split('|');if(!alive(a)||!alive(b))return;
+      const [a,b]=key.split('|');if(!PA[a]||!PA[b])return;
       const [x1,y1]=pos(a),[x2,y2]=pos(b),on=sel&&(a===sel||b===sel);
       const w=k(.7+v/100*4.5),op=sel?(on?.95:.08):(.18+.5*v/100);
       g+='<line x1="'+f(x1)+'" y1="'+f(y1)+'" x2="'+f(x2)+'" y2="'+f(y2)+'" stroke="'+(on?pal.noz:pal.muted)+'" stroke-width="'+f(w)+'" stroke-linecap="round" opacity="'+op+'"/>';
@@ -429,7 +485,7 @@ function buildSVG(o){
   }
 
   function trail(id,faint){
-    const h=S.hist[id];if(!h||h.length<2)return'';
+    const h=(S.hist[id]||[]).filter(x=>!S.asOf||x.d<=S.asOf);if(h.length<2)return'';
     const col=faint?pal.muted:pal.strong,op=faint?.35:.9;
     const pts=h.map(x=>[px(x.o),py(x.e),x.d]);
     let r='';
@@ -451,10 +507,10 @@ function buildSVG(o){
   }
   if(S.showTrail){
     if(sel)g+=trail(sel,false);
-    else live().forEach(p=>{g+=trail(p.id,true)});
+    else V.forEach(p=>{g+=trail(p.id,true)});
   }
 
-  live().forEach(p=>{
+  V.forEach(p=>{
     const [x,y]=pos(p.id);
     const hm=fm&&fm.has(p.id),linked=sel&&strength(sel,p.id)>0,dim=fm?(!hm&&p.id!==sel):(sel&&p.id!==sel&&!linked);
     g+='<g opacity="'+(dim?.25:1)+'">';
@@ -486,9 +542,9 @@ function download(blob,name){
   setTimeout(()=>URL.revokeObjectURL(url),2000);
 }
 function savePng(){
-  if(!live().length){alert('保存する人がいません。');return}
-  const now=new Date(),W=1200,H=1100,sp=S.sel&&byId(S.sel);
-  const svg=buildSVG({W,H,s:1.5,hdr:{h:104,title:'人物ポジショニングマップ',stamp:fmtJP(now),note:[sp?'選択中：'+dn(sp):'',filterNote()].filter(Boolean).join('　')},hits:false});
+  if(!vis().length){alert('保存する人がいません。');return}
+  const now=S.asOf?new Date(S.asOf+'T00:00:00'):new Date(),W=1200,H=1100,sp=S.sel&&byId(S.sel);
+  const svg=buildSVG({W,H,s:1.5,hdr:{h:104,title:'People Positioning Map',stamp:S.asOf?now.getFullYear()+'年'+(now.getMonth()+1)+'月'+now.getDate()+'日 時点':fmtJP(now),note:[sp?'選択中：'+dn(sp):'',filterNote()].filter(Boolean).join('　')},hits:false});
   const img=new Image();
   img.onload=()=>{
     const c=document.createElement('canvas');c.width=W*2;c.height=H*2;
@@ -500,8 +556,8 @@ function savePng(){
 }
 
 /* ---------- 詳細パネル ---------- */
-function histLines(p){
-  const h=S.hist[p.id]||[],last=h.length-1,out=[];
+function histLines(p,ro){
+  const all=S.hist[p.id]||[],h=ro?all.filter(x=>x.d<=S.asOf):all,last=h.length-1,out=[];
   for(let i=last;i>=0;i--){
     const b=h[i],a=h[i-1];let txt;
     if(i===0)txt='記録の開始（大切にしたい '+b.e+'、大切にすべき '+b.o+'）';
@@ -511,7 +567,7 @@ function histLines(p){
       if(a.o!==b.o)parts.push('大切にすべき '+a.o+'→'+b.o);
       txt=parts.length?parts.join('、'):'位置は同じ';
     }
-    out.push('<li><time>'+fmtD(b.d)+'</time><span>'+txt+(i===last&&last>0?'（現在）':'')+'</span>'+(i<last?'<button class="hx" data-hdel="'+i+'" aria-label="この点を削除">×</button>':'')+'</li>');
+    out.push('<li><time>'+fmtD(b.d)+'</time><span>'+txt+(i===last&&last>0?(ro?'（この日）':'（現在）'):'')+'</span>'+(i<last&&!ro?'<button class="hx" data-hdel="'+i+'" aria-label="この点を削除">×</button>':'')+'</li>');
   }
   return out.join('');
 }
@@ -529,7 +585,18 @@ function axisBlock(label,help,idr,idn,val){
 }
 function renderPanel(){renderPanel0();fillRanges()}
 function renderPanel0(){
-  const el=$('panel'),p=S.sel&&alive(S.sel)?byId(S.sel):null;
+  const el=$('panel'),p=S.sel&&(S.asOf?vid(S.sel):alive(S.sel))?byId(S.sel):null;
+  if(S.asOf){
+    const when=fmtD(S.asOf);
+    if(!p){el.innerHTML='<div class="empty">'+esc(when)+' 時点のマップを表示中です（閲覧のみ）。点を押すと、その日の位置が出ます。</div>';return}
+    const pa=posAt(p);
+    el.innerHTML='<div class="ph"><span class="dn">'+esc(dn(p))+'</span><button class="xbtn" data-act="close" aria-label="選択を解除">×</button></div>'+
+      '<div class="dv"><span>大切にしたい</span><b>'+pa.e+'</b></div><div class="dv"><span>大切にすべき</span><b>'+pa.o+'</b></div>'+
+      '<div class="hint" style="margin:6px 0 0">'+esc(when)+' 時点の位置です。</div>'+
+      '<div class="sec"><h3 class="sh">この日までの軌跡</h3><ul class="hist">'+histLines(p,true)+'</ul></div>'+
+      '<div class="sec"><button class="btn" data-act="now">現在に戻して編集する</button></div>';
+    return;
+  }
   if(!live().length){
     el.innerHTML='<div class="empty">まだ誰も登録されていません。<br>「＋ 人を追加」から始めるか、サンプルで操作を試せます。<div class="acts"><button class="btn main" data-act="new">＋ 人を追加</button><button class="btn" data-act="sample">サンプルを入れる</button></div></div>';
     return;
@@ -549,7 +616,7 @@ function renderPanel0(){
    (linked.length?linked.map(o=>linkRow(p,o.id)).join(''):'<div class="empty" style="padding:2px 0 6px">まだありません。下から追加できます。</div>')+
    (free.length?'<div class="addrow"><select id="p-add" aria-label="つなげる人">'+free.map(o=>'<option value="'+esc(o.id)+'">'+esc(dn(o))+'</option>').join('')+'</select><button class="btn" data-act="addlink">つながりを追加</button></div>':'')+
    '<div class="hint" style="margin:6px 0 0">数字を0にすると、つながりを外します。</div></div>'+
-   '<div class="sec"><h3 class="sh">軌跡<button class="q" data-help="trail" aria-label="説明">?</button></h3><ul class="hist" id="p-hist">'+histLines(p)+'</ul><button class="del" data-act="clrtrail">この人の軌跡を消す</button></div>'+
+   '<div class="sec"><h3 class="sh">軌跡<button class="q" data-help="trail" aria-label="説明">?</button></h3><ul class="hist" id="p-hist">'+histLines(p)+'</ul><div class="hint" style="margin:4px 0 0">軌跡は1日ごとに1点です。消すときは、もう一度押して確認します。</div><button class="del" data-act="clrtrail">この人の軌跡を消す</button></div>'+
    '<div class="sec" style="padding-top:6px"><button class="del" data-act="archive">関係がなくなった（アーカイブする）</button></div>';
 }
 function fill(el){const mn=+el.min||0,mx=+el.max||100;el.style.setProperty('--p',((+el.value-mn)/(mx-mn)*100)+'%')}
@@ -598,7 +665,21 @@ function loadSample(){
 }
 
 /* ---------- イベント ---------- */
-function render(){renderSearch();renderArcBtn();renderPanel();drawMap()}
+function render(){renderSearch();renderArcBtn();renderDate();renderPanel();drawMap()}
+function renderDate(){
+  const el=$('q-date');el.max=today();
+  let mn='';S.people.forEach(p=>{(S.hist[p.id]||[]).forEach(x=>{if(!mn||x.d<mn)mn=x.d})});
+  if(mn)el.min=mn;
+  el.value=S.asOf;
+  $('q-now').classList.toggle('hidden',!S.asOf);
+  const b=$('asof');b.classList.toggle('hidden',!S.asOf);
+  if(S.asOf)b.textContent=fmtD(S.asOf)+' 時点のマップ（閲覧のみ）。その日の位置を表示しています。関係値強度の線、メモ、材料は現在の値です。'+(vis().length?'':'　この日に記録のある人はいません。');
+}
+function setAsOf(v){
+  S.asOf=v||'';
+  if(S.sel&&S.asOf&&!vid(S.sel))S.sel=null;
+  renderDate();renderSearch();renderPanel();drawMap();
+}
 function renderArcBtn(){const n=S.people.filter(p=>p.arch).length;$('b-arc').classList.toggle('hidden',!n);$('arc-n').textContent=n}
 function renderArc(){
   const a=S.people.filter(p=>p.arch).sort((x,y)=>String(y.archAt).localeCompare(String(x.archAt)));
@@ -606,6 +687,7 @@ function renderArc(){
 }
 function select(id){S.sel=id;renderPanel();drawMap()}
 function addPerson(){
+  if(S.asOf){S.asOf='';renderDate()}
   const id='n'+uid(),p={id,name:'新しい人',full:'',e:50,o:50,mat:{},memo:''};
   S.people.push(p);recordPos(p);persist();select(id);
   const n=$('p-name');if(n){n.focus();n.select()}
@@ -616,7 +698,9 @@ document.addEventListener('click',ev=>{
   const q=t.closest&&t.closest('[data-help]');
   if(q){const key=q.getAttribute('data-help'),v=q.getAttribute('data-v');openHelp(key,key==='mat'?v:(v==null?null:+v));return}
   const hd=t.closest&&t.closest('[data-hdel]');
-  if(hd){const p=byId(S.sel);if(p&&S.hist[p.id]){S.hist[p.id].splice(+hd.getAttribute('data-hdel'),1);persist();refreshHist();drawMap()}return}
+  if(hd){
+    if(hd.getAttribute('data-ok')!=='1'){hd.textContent='消す？';hd.setAttribute('data-ok','1');hd.style.color='var(--noz-text)';hd.style.fontSize='12px';return}
+    const p=byId(S.sel);if(p&&S.hist[p.id]){S.hist[p.id].splice(+hd.getAttribute('data-hdel'),1);persist();refreshHist();drawMap()}return}
   const rs=t.closest&&t.closest('[data-restore]');
   if(rs){const p=byId(rs.getAttribute('data-restore'));if(p){p.arch=false;p.archAt='';persist();renderArc();renderArcBtn();renderSearch();renderPanel();drawMap()}return}
   const pd=t.closest&&t.closest('[data-pdel]');
@@ -632,6 +716,7 @@ document.addEventListener('click',ev=>{
   if(a){
     const act=a.getAttribute('data-act'),p=S.sel&&byId(S.sel);
     if(act==='close')select(null);
+    if(act==='now'){S.asOf='';render()}
     if(act==='new')addPerson();
     if(act==='sample')loadSample();
     if(act==='goto')select(a.getAttribute('data-id'));
@@ -673,11 +758,11 @@ mapBox.addEventListener('pointerdown',ev=>{
   const h=ev.target.closest&&ev.target.closest('.hit');if(!h||!LAY)return;
   const id=h.getAttribute('data-id'),p=byId(id);if(!p)return;
   const [sx,sy]=toSvg(ev);
-  drag={id,pid:ev.pointerId,gx:sx-LAY.px(p.o),gy:sy-LAY.py(p.e),x0:ev.clientX,y0:ev.clientY,moved:false,was:S.sel===id};
+  drag={id,pid:ev.pointerId,gx:sx-LAY.px(p.o),gy:sy-LAY.py(p.e),x0:ev.clientX,y0:ev.clientY,moved:false,noDrag:!!S.asOf,was:S.sel===id};
   try{mapBox.setPointerCapture(ev.pointerId)}catch(e){}
 });
 mapBox.addEventListener('pointermove',ev=>{
-  if(!drag||ev.pointerId!==drag.pid)return;
+  if(!drag||ev.pointerId!==drag.pid||drag.noDrag)return;
   if(!drag.moved){
     if(Math.hypot(ev.clientX-drag.x0,ev.clientY-drag.y0)<5)return;
     drag.moved=true;
@@ -739,6 +824,10 @@ $('set-add').onclick=()=>{const m=Math.max(...S.guide.map(g=>g.s));S.guide.push(
 $('set-reset').onclick=()=>{S.guide=cloneGuide();persist();renderSet();renderPanel()};
 $('set-rows').addEventListener('change',commitSet);
 $('mat-rows').addEventListener('change',commitMats);
+$('q-date').addEventListener('change',e=>setAsOf(e.target.value));
+$('q-now').onclick=()=>setAsOf('');
+$('b-help').onclick=()=>$('about').showModal();
+$('about-x').onclick=()=>$('about').close();
 $('b-arc').onclick=()=>{renderArc();$('arc').showModal()};
 $('arc-x').onclick=()=>$('arc').close();
 $('trail-gap').onchange=e=>{S.trailGap=+e.target.value;persist()};
@@ -775,7 +864,7 @@ $('s-wipe').onclick=ev=>{
   apply({people:[],links:{},hist:{},guide:cloneGuide()});S.sel=null;persist();
   b.textContent='全データを削除';b.removeAttribute('data-ok');renderSet();render();setMsg('全データを削除しました。');
 };
-['help','set','arc'].forEach(id=>$(id).addEventListener('click',ev=>{if(ev.target===$(id))$(id).close()}));
+['help','set','arc','about'].forEach(id=>$(id).addEventListener('click',ev=>{if(ev.target===$(id))$(id).close()}));
 $('t-links').onchange=e=>{S.showLinks=e.target.checked;persist();drawMap()};
 $('t-trail').onchange=e=>{S.showTrail=e.target.checked;persist();drawMap()};
 

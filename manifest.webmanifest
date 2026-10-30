@@ -1,6 +1,6 @@
 {
-  "name": "人物ポジショニングマップ",
-  "short_name": "人物マップ",
+  "name": "People Positioning Map",
+  "short_name": "People Map",
   "description": "知り合いを気持ちと機会の2軸で整理する個人用ツール",
   "lang": "ja",
   "start_url": "./index.html",
