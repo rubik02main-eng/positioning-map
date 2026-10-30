@@ -23,13 +23,12 @@
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%;background:var(--bg)}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:14px;line-height:1.7;letter-spacing:.02em;
-  padding:calc(14px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) calc(48px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
-.wrap{max-width:1200px;margin:0 auto}
+  padding:calc(10px + env(safe-area-inset-top,0px)) max(10px,env(safe-area-inset-right,0px)) calc(32px + env(safe-area-inset-bottom,0px)) max(10px,env(safe-area-inset-left,0px))}
+.wrap{max-width:1600px;margin:0 auto}
 button,input,select,textarea{font:inherit;color:inherit;letter-spacing:inherit}
 button{cursor:pointer}
 :focus-visible{outline:2px solid var(--noz);outline-offset:2px}
-.top{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;margin-bottom:14px}
-h1::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--noz);margin-right:10px;vertical-align:1px}
+.top{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;margin-bottom:8px}
 h1{font-size:15px;margin:0;font-weight:500;letter-spacing:.14em;color:var(--strong)}
 .acts{display:flex;gap:8px;flex-wrap:wrap}
 .btn{border:1px solid var(--line);background:none;border-radius:2px;padding:7px 14px;min-height:38px;color:var(--ink);font-size:13px}
@@ -39,7 +38,7 @@ h1{font-size:15px;margin:0;font-weight:500;letter-spacing:.14em;color:var(--stro
 .grid{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:start}
 
 .card{background:var(--raised);border:1px solid var(--line);border-radius:6px}
-.mapcard{padding:10px 10px 6px}
+.mapcard{padding:8px 8px 4px}
 .tools{display:flex;flex-wrap:wrap;gap:4px 18px;align-items:center;padding:2px 6px 8px}
 .tools .sp{flex:1}
 .tools .lbl{color:var(--muted);font-size:12px;display:inline-flex;align-items:center;gap:6px}
@@ -52,8 +51,13 @@ h1{font-size:15px;margin:0;font-weight:500;letter-spacing:.14em;color:var(--stro
 .sw input:focus-visible + .tr{outline:2px solid var(--noz);outline-offset:2px}
 .q{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;border:1px solid var(--muted);color:var(--muted);background:none;font-size:11px;font-weight:700;line-height:1;padding:0;flex:none}
 .q:hover{border-color:var(--noz);color:var(--noz-text)}
-.mapwrap{display:flex;gap:8px;align-items:stretch}
-.mapwrap #map{flex:1;min-width:0}
+.mapwrap{display:grid;grid-template-columns:auto minmax(0,1fr) 64px;column-gap:6px;align-items:stretch}
+.mapwrap #map{min-width:0}
+.axl{color:var(--muted);font-size:12px;display:inline-flex;align-items:center;gap:6px}
+.ylab{writing-mode:vertical-rl;transform:rotate(180deg);display:flex;align-items:center;justify-content:center;padding:0 2px 20px 0}
+.xlab{display:flex;justify-content:center;padding:0 0 2px 0}
+.tg{display:flex;flex-wrap:wrap;gap:4px 18px;align-items:center}
+.tg .lbl{color:var(--muted);font-size:12px;display:inline-flex;align-items:center;gap:6px}
 #wheel{width:64px;min-height:180px;flex:none;position:relative;cursor:ns-resize;touch-action:none;user-select:none;-webkit-user-select:none}
 #wheel svg{position:absolute;left:0;top:0;width:100%;height:100%;display:block}
 #wheel:focus-visible{outline:1px solid var(--muted);outline-offset:2px}
@@ -173,7 +177,10 @@ dialog::backdrop{background:rgba(0,0,0,.65)}
 <body>
 <div class="wrap">
   <div class="top">
-    <h1>People Positioning Map</h1>
+    <div class="tg">
+      <span class="lbl"><label class="sw"><input type="checkbox" id="t-links" checked><span class="tr"></span>関係値強度</label><button class="q" data-help="links" aria-label="関係値強度の説明">?</button></span>
+      <span class="lbl"><label class="sw"><input type="checkbox" id="t-trail" checked><span class="tr"></span>軌跡</label><button class="q" data-help="trail" aria-label="軌跡の説明">?</button></span>
+    </div>
     <div class="acts">
       <button class="btn main" id="b-add">＋ 人を追加</button>
       <button class="btn ic" id="b-q" title="検索" aria-label="検索" aria-expanded="false"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg></button>
@@ -186,13 +193,6 @@ dialog::backdrop{background:rgba(0,0,0,.65)}
 
   <div class="grid">
     <section class="card mapcard">
-      <div class="tools">
-        <span class="lbl">横 大切にしたい<button class="q" data-help="axisE" aria-label="横軸の説明">?</button></span>
-        <span class="lbl">縦 大切にすべき<button class="q" data-help="axisO" aria-label="縦軸の説明">?</button></span>
-        <span class="sp"></span>
-        <span class="lbl"><label class="sw"><input type="checkbox" id="t-links" checked><span class="tr"></span>関係値強度</label><button class="q" data-help="links" aria-label="関係値強度の説明">?</button></span>
-        <span class="lbl"><label class="sw"><input type="checkbox" id="t-trail" checked><span class="tr"></span>軌跡</label><button class="q" data-help="trail" aria-label="軌跡の説明">?</button></span>
-      </div>
       <div class="search">
         <label class="lbl2" for="q-date">日付で見る</label>
         <input id="q-date" type="date" aria-label="この日付のマップを見る"><span class="qs" id="q-state"></span>
@@ -207,8 +207,7 @@ dialog::backdrop{background:rgba(0,0,0,.65)}
         <span class="seg hidden" id="q-mode"><button data-qmode="all">すべて</button><button data-qmode="any">どれか</button></span></div>
       <div class="found" id="q-found"></div>
       </div>
-      <div class="mapwrap"><div id="map"></div><div id="wheel" tabindex="0" role="slider" aria-orientation="vertical" aria-label="日付ホイール（下へ回すと過去へ）" title="下へ回すと過去へ、上へ回すと現在へ"></div></div>
-      <p class="hint">点をドラッグすると位置を動かせます。点を押すと詳細が開きます。右のホイールを下へ回すと、1日ずつ過去のマップを見られます。</p>
+      <div class="mapwrap"><div class="ylab"><span class="axl">縦 大切にすべき<button class="q" data-help="axisO" aria-label="縦軸の説明">?</button></span></div><div id="map"></div><div id="wheel" tabindex="0" role="slider" aria-orientation="vertical" aria-label="日付ホイール（下へ回すと過去へ）" title="下へ回すと過去へ、上へ回すと現在へ"></div><div></div><div class="xlab"><span class="axl">横 大切にしたい<button class="q" data-help="axisE" aria-label="横軸の説明">?</button></span></div><div></div></div>
     </section>
     <aside class="card panel" id="panel" aria-live="polite"></aside>
   </div>
@@ -467,7 +466,7 @@ function buildSVG(o){
   const {W,H,s,hdr,hits}=o,pal=PAL;
   const k=n=>n*s,f=n=>n.toFixed(1);
   const top=hdr?hdr.h:0;
-  const ml=k(40),mr=k(12),mt=top+k(12),mb=k(38),pw=W-ml-mr,ph=H-mt-mb;
+  const ml=hits?k(30):k(40),mr=hits?k(8):k(12),mt=top+k(hits?8:12),mb=hits?k(20):k(38),pw=W-ml-mr,ph=H-mt-mb;
   const px=v=>ml+(v-X0)/(X1-X0)*pw,py=v=>mt+(Y1-v)/(Y1-Y0)*ph;
   if(hits)LAY={W,H,px,py,ox:sx=>X0+(sx-ml)/pw*(X1-X0),ey:sy=>Y1-(sy-mt)/ph*(Y1-Y0)};
   const V=vis(),PA={};V.forEach(p=>{PA[p.id]=posAt(p)});
@@ -491,8 +490,10 @@ function buildSVG(o){
     g+=tx(px(v),mt+ph+k(15),v,10,pal.muted,'text-anchor="middle"');
     g+=tx(ml-k(7),py(v)+k(3.5),v,10,pal.muted,'text-anchor="end"');
   });
+  if(!hits){
   g+=tx(ml+pw/2,mt+ph+k(32),'大切にしたい →',11,pal.muted,'text-anchor="middle" letter-spacing="'+f(k(1))+'"');
   g+=tx(0,0,'大切にすべき →',11,pal.muted,'text-anchor="middle" letter-spacing="'+f(k(1))+'" transform="translate('+f(k(11))+' '+f(mt+ph/2)+') rotate(-90)"');
+  }
 
   if(sel){
     const sp=PA[sel],gx=px(sp.e),gy=py(sp.o),dash=' stroke-dasharray="'+f(k(3))+' '+f(k(3))+'"';
@@ -559,7 +560,7 @@ function buildSVG(o){
 function drawMap(){
   const box=$('map');
   const W=Math.max(300,Math.floor(box.clientWidth||640));
-  const H=Math.round(Math.min(W*.64,560));
+  const H=Math.round(Math.max(260,Math.min(W*.75,window.innerHeight-150)));
   box.innerHTML=buildSVG({W,H,s:1,hdr:null,hits:true});
   if(typeof wheelPaint==='function'&&$('wheel'))wheelPaint();
 }
