@@ -152,7 +152,6 @@ dialog::backdrop{background:rgba(0,0,0,.65)}
 .arow .am{font-size:12px;color:var(--muted)}
 .search input[type=date]{background:var(--plot);border:1px solid var(--line);border-radius:2px;color:var(--ink);padding:6px 8px;font-size:13px;min-height:36px;color-scheme:dark}
 .search input[type=date]:focus{outline:none;border-color:var(--noz)}
-.asof{margin:0 6px 8px;padding:6px 10px;border:1px solid var(--noz);color:var(--noz-text);font-size:12px;border-radius:2px}
 .dv{display:flex;justify-content:space-between;align-items:baseline;padding:4px 0;font-size:13px}
 .dv b{font-size:22px;font-weight:300;color:var(--strong)}
 .dn{flex:1;font-size:20px;font-weight:500;color:var(--strong);letter-spacing:.06em}
@@ -177,6 +176,7 @@ dialog::backdrop{background:rgba(0,0,0,.65)}
     <h1>People Positioning Map</h1>
     <div class="acts">
       <button class="btn main" id="b-add">＋ 人を追加</button>
+      <button class="btn ic" id="b-q" title="検索" aria-label="検索" aria-expanded="false"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg></button>
       <button class="btn ic" id="b-png" title="画像を保存" aria-label="画像を保存"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg></button>
       <button class="btn ic" id="b-help" title="使い方" aria-label="使い方"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7M12 17v.01"/></svg></button>
       <button class="btn ic hidden" id="b-arc" title="アーカイブ" aria-label="アーカイブ"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18v4H3zM5 9v10h14V9M10 13h4"/></svg><span class="bd" id="arc-n">0</span></button>
@@ -194,18 +194,21 @@ dialog::backdrop{background:rgba(0,0,0,.65)}
         <span class="lbl"><label class="sw"><input type="checkbox" id="t-trail" checked><span class="tr"></span>軌跡</label><button class="q" data-help="trail" aria-label="軌跡の説明">?</button></span>
       </div>
       <div class="search">
-        <input id="q-text" type="search" placeholder="名前で検索（メモ・材料も対象）" autocomplete="off" aria-label="検索">
-        <button class="btn hidden" id="q-clear">解除</button>
         <label class="lbl2" for="q-date">日付で見る</label>
         <input id="q-date" type="date" aria-label="この日付のマップを見る"><span class="qs" id="q-state"></span>
         <button class="btn hidden" id="q-now">現在に戻す</button>
       </div>
+      <div id="sbox" class="hidden">
+      <div class="search">
+        <input id="q-text" type="search" placeholder="名前で検索（メモ・材料も対象）" autocomplete="off" aria-label="検索">
+        <button class="btn hidden" id="q-clear">解除</button>
+      </div>
       <div class="search" style="padding-top:0"><span class="lbl2">材料で絞る</span><div class="chips" id="q-chips"></div>
         <span class="seg hidden" id="q-mode"><button data-qmode="all">すべて</button><button data-qmode="any">どれか</button></span></div>
       <div class="found" id="q-found"></div>
-      <div class="asof hidden" id="asof"></div>
-      <div class="mapwrap"><div id="map"></div><div id="wheel" tabindex="0" role="slider" aria-orientation="vertical" aria-label="日付ホイール（上へ回すと過去へ）" title="上へ回すと過去へ、下へ回すと現在へ"></div></div>
-      <p class="hint">点をドラッグすると位置を動かせます。点を押すと詳細が開きます。右のホイールを上へ回すと、1日ずつ過去のマップを見られます。</p>
+      </div>
+      <div class="mapwrap"><div id="map"></div><div id="wheel" tabindex="0" role="slider" aria-orientation="vertical" aria-label="日付ホイール（下へ回すと過去へ）" title="下へ回すと過去へ、上へ回すと現在へ"></div></div>
+      <p class="hint">点をドラッグすると位置を動かせます。点を押すと詳細が開きます。右のホイールを下へ回すと、1日ずつ過去のマップを見られます。</p>
     </section>
     <aside class="card panel" id="panel" aria-live="polite"></aside>
   </div>
@@ -402,7 +405,8 @@ function filterNote(){
   S.qmats.forEach(id=>{const m=S.mats.find(x=>x.id===id);if(m)parts.push(m.name)});
   return '絞り込み：'+parts.join(S.qmode==='any'?' または ':' かつ ')+'（'+fm.size+'人）';
 }
-function renderSearch(){
+function renderSBox(){const open=S.qopen||!!S.qtext||S.qmats.length>0;$('sbox').classList.toggle('hidden',!open);$('b-q').setAttribute('aria-expanded',open?'true':'false');$('b-q').style.color=open?'var(--strong)':''}
+function renderSearch(){renderSBox();
   S.qmats=S.qmats.filter(id=>S.mats.some(m=>m.id===id));
   $('q-chips').innerHTML=S.mats.map(m=>'<button class="chip" data-chip="'+esc(m.id)+'" aria-pressed="'+(S.qmats.includes(m.id)?'true':'false')+'">'+esc(m.name)+'</button>').join('');
   $('q-mode').classList.toggle('hidden',S.qmats.length<2);
@@ -698,10 +702,9 @@ function renderDate(){
   let mn='';S.people.forEach(p=>{(S.hist[p.id]||[]).forEach(x=>{if(!mn||x.d<mn)mn=x.d})});
   if(mn)el.min=mn;
   el.value=S.asOf;wheelPaint();
-  $('q-state').textContent=S.asOf?'':'最新（現在）を表示中';
+  $('q-state').textContent=S.asOf?fmtD(S.asOf)+' 時点（閲覧のみ）'+(vis().length?'':'。この日に記録のある人はいません'):'最新（現在）を表示中';
+  $('q-state').title=S.asOf?'関係値強度の線、メモ、材料は現在の値です':'';
   $('q-now').classList.toggle('hidden',!S.asOf);
-  const b=$('asof');b.classList.toggle('hidden',!S.asOf);
-  if(S.asOf)b.textContent=fmtD(S.asOf)+' 時点のマップ（閲覧のみ）。その日の位置を表示しています。関係値強度の線、メモ、材料は現在の値です。'+(vis().length?'':'　この日に記録のある人はいません。');
 }
 function setAsOf(v){
   S.asOf=v||'';
@@ -889,7 +892,7 @@ function wheelPaint(){
   const C={line:'#26262a',dim:'#6f6f76',ink:'#d6d6d9',noz:'#f26522'};
   let g='<rect x="'+tx0+'" y="'+top+'" width="'+(tx1-tx0)+'" height="'+(bot-top)+'" fill="#0c0c0d" stroke="'+C.dim+'" stroke-opacity=".6"/>';
   for(let m=Math.max(0,off-40);m<=Math.min(max,off+40);m++){
-    const r=(m-off)*SP,u=Math.max(-1,Math.min(1,r/half));
+    const r=-(m-off)*SP,u=Math.max(-1,Math.min(1,r/half));
     if(Math.abs(r)>half)continue;
     const y=cy+half*Math.sin(u*Math.PI/2),t=Math.abs(u),wk=m%7===0;
     const len=(wk?22:12)*(1-t*.75),op=(1-t*.7)*(wk?1:.55);
@@ -897,7 +900,7 @@ function wheelPaint(){
     g+='<line x1="'+(cx-len/2).toFixed(1)+'" x2="'+(cx+len/2).toFixed(1)+'" y1="'+y.toFixed(1)+'" y2="'+y.toFixed(1)+'" stroke="'+C.ink+'" stroke-opacity="'+op.toFixed(2)+'" stroke-width="'+(wk?1.6:1)+'"/>';
   }
   for(let m=Math.max(0,off-60);m<=Math.min(max,off+60);m++){
-    const y=cy+(m-off)*6;if(y<top-4||y>bot+4)continue;
+    const y=cy-(m-off)*6;if(y<top-4||y>bot+4)continue;
     g+='<line x1="4" x2="'+(m%7===0?11:8)+'" y1="'+y.toFixed(1)+'" y2="'+y.toFixed(1)+'" stroke="'+C.dim+'"/><line x1="'+(W-4)+'" x2="'+(W-(m%7===0?11:8))+'" y1="'+y.toFixed(1)+'" y2="'+y.toFixed(1)+'" stroke="'+C.dim+'"/>';
   }
   g+='<line x1="'+tx0+'" x2="'+tx1+'" y1="'+cy+'" y2="'+cy+'" stroke="'+C.noz+'" stroke-width="2"/>';
@@ -912,16 +915,17 @@ wheel.addEventListener('pointermove',ev=>{
   if(!wd||ev.pointerId!==wd.pid)return;
   wd.acc+=ev.clientY-wd.y;wd.y=ev.clientY;
   const n=Math.trunc(wd.acc/TICK);
-  if(n){wd.acc-=n*TICK;wheelStep(n*-1)}
+  if(n){wd.acc-=n*TICK;wheelStep(n)}
 });
 const wend=ev=>{if(wd&&ev.pointerId===wd.pid){wd=null}};
 wheel.addEventListener('pointerup',wend);wheel.addEventListener('pointercancel',wend);
-wheel.addEventListener('wheel',ev=>{ev.preventDefault();wheelStep((ev.deltaY<0?1:-1)*Math.max(1,Math.round(Math.abs(ev.deltaY)/30)))},{passive:false});
+wheel.addEventListener('wheel',ev=>{ev.preventDefault();wheelStep((ev.deltaY>0?1:-1)*Math.max(1,Math.round(Math.abs(ev.deltaY)/30)))},{passive:false});
 wheel.addEventListener('keydown',ev=>{
-  const m={ArrowUp:1,ArrowDown:-1,PageUp:7,PageDown:-7}[ev.key];
+  const m={ArrowDown:1,ArrowUp:-1,PageDown:7,PageUp:-7}[ev.key];
   if(m){ev.preventDefault();wheelStep(m)}
 });
 $('q-now').onclick=()=>setAsOf('');
+$('b-q').onclick=()=>{const open=S.qopen||!!S.qtext||S.qmats.length>0;if(open){S.qopen=false;S.qtext='';S.qmats=[];$('q-text').value='';renderSearch();drawMap()}else{S.qopen=true;renderSBox();$('q-text').focus()}};
 $('b-help').onclick=()=>$('about').showModal();
 $('about-x').onclick=()=>$('about').close();
 $('b-arc').onclick=()=>{renderArc();$('arc').showModal()};
