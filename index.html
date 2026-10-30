@@ -2,669 +2,575 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>人物ポジショニングマップ</title>
 <link rel="manifest" href="manifest.webmanifest">
-<meta name="theme-color" content="#f6f5f2" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#161617" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f4f4f3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#161718" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="人物マップ">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <style>
+/* 配色はOGAデザインシステムに合わせる: 黒とグレーのモノトーン、オレンジ(nozzle)はハイライトにだけ使う。影は使わない。 */
 :root{
-  --bg:#f6f5f2; --card:#ffffff; --fg:#2b2b2b; --sub:#76726b; --line:#dedbd5;
-  --accent:#c4572d; --accent-tint:rgba(196,87,45,.09); --btn:#2b2b2b; --btn-fg:#fff;
+  --plate:#f4f4f3; --raised:#ffffff; --line:#dcdddb; --grid:#e8e8e6; --plot:#fafaf9;
+  --ink-strong:#2a2c2e; --ink:#3a3c3f; --muted:#6b6e72; --dot:#8a8d91;
+  --noz:#f26522; --noz-text:#b4470f; --noz-soft:#fce4d6; --on-noz:#1e1f21;
+  --font:"Noto Sans JP","Hiragino Sans","Yu Gothic UI","Meiryo",system-ui,sans-serif;
+  --display:"Jost","Noto Sans JP","Hiragino Sans","Yu Gothic UI",sans-serif;
 }
 @media (prefers-color-scheme: dark){
-  :root{
-    --bg:#161617; --card:#1f1f21; --fg:#e8e6e1; --sub:#9a968f; --line:#3a3a3e;
-    --accent:#e8875c; --accent-tint:rgba(232,135,92,.13); --btn:#e8e6e1; --btn-fg:#161617;
+  :root:not([data-theme="light"]){
+    --plate:#161718; --raised:#202224; --line:#313336; --grid:#292b2d; --plot:#1b1c1e;
+    --ink-strong:#ecedee; --ink:#d2d4d6; --muted:#9a9da1; --dot:#7c7f84;
+    --noz-text:#ff8a4c; --noz-soft:#3a2014; color-scheme:dark;
   }
+}
+:root[data-theme="dark"]{
+  --plate:#161718; --raised:#202224; --line:#313336; --grid:#292b2d; --plot:#1b1c1e;
+  --ink-strong:#ecedee; --ink:#d2d4d6; --muted:#9a9da1; --dot:#7c7f84;
+  --noz-text:#ff8a4c; --noz-soft:#3a2014; color-scheme:dark;
 }
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
-body{margin:0;background:var(--bg);color:var(--fg);
-  font-family:"Hiragino Sans","Yu Gothic UI","Meiryo",system-ui,sans-serif;font-size:15px;line-height:1.6}
-.wrap{max-width:960px;margin:0 auto;padding:12px 16px 48px}
-h1{font-size:18px;margin:8px 0 2px}
-.lead{margin:0 0 12px;color:var(--sub);font-size:12px}
-.bar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
-button,select,input,textarea{font:inherit;color:inherit}
-button{border:1px solid var(--line);background:var(--card);border-radius:8px;padding:8px 12px;cursor:pointer;min-height:40px}
-button:hover{border-color:var(--sub)}
-button.primary{background:var(--btn);color:var(--btn-fg);border-color:var(--btn)}
-button.danger{color:var(--fg)}
-.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:12px}
-.insight{border-left:4px solid var(--fg)}
-.insight h2{font-size:14px;margin:0 0 6px}
-.insight .ok{color:var(--sub);font-size:13px;margin:0}
-.insight ul{list-style:none;margin:0;padding:0}
-.insight li{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:6px 0;border-top:1px solid var(--line)}
-.insight li:first-child{border-top:0}
-.tabs{display:flex;gap:4px;margin-bottom:10px}
-.tabs button{flex:1;border-radius:8px}
-.tabs button[aria-selected="true"]{background:var(--btn);color:var(--btn-fg);border-color:var(--btn)}
-.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px}
-select{border:1px solid var(--line);background:var(--card);border-radius:8px;padding:8px;min-height:40px;max-width:100%}
-#map{width:100%;touch-action:manipulation}
-#map svg{display:block;width:100%;height:auto}
-.note{font-size:12px;color:var(--sub);margin:6px 0 0}
-.changes{margin:8px 0 0;padding:0;list-style:none;font-size:13px}
-.changes li{padding:4px 0;border-top:1px solid var(--line)}
-.group{margin-bottom:14px}
-.group h3{font-size:14px;margin:0 0 6px;display:flex;gap:8px;align-items:baseline}
-.group h3 small{color:var(--sub);font-weight:400}
-.group.tr h3{color:var(--accent)}
-.group.tr .item{border-left:3px solid var(--accent)}
-.item{display:flex;justify-content:space-between;gap:8px;width:100%;text-align:left;background:var(--card);
-  border:1px solid var(--line);border-radius:8px;padding:8px 12px;margin-bottom:6px;align-items:center}
-.item .n{font-weight:700}
-.item .m{color:var(--sub);font-size:12px}
-.tag{font-size:11px;font-weight:700;border:1px solid var(--fg);border-radius:999px;padding:0 8px;white-space:nowrap}
-.empty{color:var(--sub);font-size:13px;padding:8px 2px}
-dialog{border:1px solid var(--line);border-radius:14px;background:var(--card);color:var(--fg);padding:0;width:min(440px,calc(100vw - 24px));max-height:calc(100vh - 24px)}
-dialog::backdrop{background:rgba(0,0,0,.45)}
-form.edit{padding:16px;display:flex;flex-direction:column;gap:14px}
-form.edit h2{margin:0;font-size:16px}
-label.f{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--sub)}
-label.f input[type=text],label.f input[type=date],label.f textarea{
-  border:1px solid var(--line);border-radius:8px;padding:8px;background:var(--bg);color:var(--fg);font-size:16px;min-height:40px}
-label.f textarea{min-height:80px;resize:vertical}
-.slider{display:flex;align-items:center;gap:10px}
-.slider input{flex:1}
-.slider output{font-size:20px;font-weight:700;color:var(--fg);min-width:1.5em;text-align:center}
-fieldset{border:1px solid var(--line);border-radius:8px;margin:0;padding:8px 12px}
-legend{font-size:13px;color:var(--sub);padding:0 4px}
-fieldset label{display:flex;gap:8px;align-items:center;padding:6px 0;min-height:36px}
-fieldset input{width:20px;height:20px}
-.actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
-.actions .sp{flex:1}
+body{margin:0;background:var(--plate);color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.7;
+  padding:calc(12px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) calc(40px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.wrap{max-width:1180px;margin:0 auto}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+h1{font-size:20px;margin:0;line-height:1.3;color:var(--ink-strong);letter-spacing:.06em;font-weight:500}
+h1::after{content:"";display:block;width:36px;height:3px;background:var(--noz);margin-top:6px}
+.top{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:flex-end;justify-content:space-between;margin-bottom:12px}
+.top .acts{display:flex;gap:8px;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--raised);border-radius:2px;padding:8px 14px;min-height:42px;color:var(--ink)}
+.btn:hover{border-color:var(--muted)}
+.btn.main{background:var(--ink-strong);color:var(--plate);border-color:var(--ink-strong)}
+.btn:focus-visible,.q:focus-visible,.xbtn:focus-visible{outline:2px solid var(--noz);outline-offset:2px}
+.bar{display:flex;flex-wrap:wrap;gap:6px 20px;align-items:center;background:var(--raised);border:1px solid var(--line);border-radius:6px;padding:6px 12px;margin-bottom:12px}
+.bar .grp{display:flex;align-items:center;gap:8px}
+.bar .axis{color:var(--muted);font-size:13px}
+.sw{display:inline-flex;align-items:center;gap:8px;cursor:pointer;min-height:36px}
+.sw input{position:absolute;opacity:0;width:1px;height:1px}
+.sw .tr{width:40px;height:24px;border-radius:12px;background:var(--line);position:relative;transition:background .15s;flex:none}
+.sw .tr::after{content:"";position:absolute;left:3px;top:3px;width:18px;height:18px;border-radius:50%;background:var(--raised);transition:transform .15s}
+.sw input:checked + .tr{background:var(--ink-strong)}
+.sw input:checked + .tr::after{transform:translateX(16px);background:var(--plate)}
+.sw input:focus-visible + .tr{outline:2px solid var(--noz);outline-offset:2px}
+.q{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;border:1.5px solid var(--muted);color:var(--muted);background:none;font-size:13px;font-weight:700;line-height:1;padding:0;flex:none}
+.q:hover{border-color:var(--ink-strong);color:var(--ink-strong)}
+.grid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(300px,1fr);gap:14px;align-items:start}
+@media (max-width:860px){.grid{grid-template-columns:minmax(0,1fr)}}
+.card{background:var(--raised);border:1px solid var(--line);border-radius:6px;padding:12px}
+#map svg{display:block;width:100%;height:auto;touch-action:manipulation}
+.hint{font-size:13px;color:var(--muted);margin:6px 2px 0;line-height:1.6}
+.empty{color:var(--muted);padding:14px 4px;font-size:14px}
+.empty .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.ph{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.ph input{flex:1;min-width:0;font-size:19px;font-weight:700;color:var(--ink-strong);border:1px solid transparent;background:none;border-radius:2px;padding:4px 8px}
+.ph input:hover,.ph input:focus{border-color:var(--line);background:var(--plate)}
+.xbtn{border:0;background:none;font-size:22px;line-height:1;padding:6px 10px;color:var(--muted)}
+.badge{display:inline-block;font-size:12px;border:1px solid var(--line);border-radius:999px;padding:0 10px;margin-bottom:10px;color:var(--muted)}
+.badge.tr{color:var(--noz-text);border-color:var(--noz-text)}
+.sec{border-top:1px solid var(--line);padding-top:10px;margin-top:12px}
+.sec h3{font-size:14px;margin:0 0 6px;display:flex;align-items:center;gap:8px;color:var(--ink-strong)}
+.slide{display:flex;align-items:center;gap:10px}
+.slide input[type=range]{flex:1;min-width:0;accent-color:var(--ink-strong);height:32px}
+.slide output{font-weight:700;min-width:2.2em;text-align:right;font-variant-numeric:tabular-nums;color:var(--ink-strong)}
+.chk{display:flex;align-items:center;gap:10px;min-height:38px}
+.chk input{width:20px;height:20px;accent-color:var(--ink-strong)}
+textarea{width:100%;min-height:70px;border:1px solid var(--line);background:var(--plate);border-radius:2px;padding:8px;font-size:15px;resize:vertical}
+.lrow{border:1px solid var(--line);border-radius:6px;padding:8px 10px;margin-bottom:8px}
+.lrow .l1{display:flex;align-items:center;gap:8px}
+.lrow .nm{border:0;background:none;font-weight:700;padding:4px 0;text-align:left;flex:1;min-width:0;color:var(--ink-strong);text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px}
+.lrow .snum{width:4.2em;border:1px solid var(--line);background:var(--plate);border-radius:2px;padding:4px 6px;text-align:right;font-variant-numeric:tabular-nums}
+.lrow input[type=range]{width:100%;accent-color:var(--ink-strong);height:32px;margin-top:2px}
+.lrow .tier{font-size:13px;color:var(--muted)}
+.addrow{display:flex;gap:8px;flex-wrap:wrap}
+.addrow select{flex:1;min-width:0;border:1px solid var(--line);background:var(--plate);border-radius:2px;padding:8px;min-height:42px}
+.hist{list-style:none;margin:0;padding:0;font-size:13px}
+.hist li{display:flex;gap:10px;padding:4px 0;border-top:1px solid var(--line)}
+.hist li:first-child{border-top:0}
+.hist time{color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.del{border:0;background:none;color:var(--muted);text-decoration:underline;padding:8px 0;min-height:40px}
+dialog{border:1px solid var(--line);border-radius:6px;background:var(--raised);color:var(--ink);padding:0;width:min(540px,calc(100vw - 24px));max-height:calc(100% - 24px)}
+dialog::backdrop{background:rgba(0,0,0,.5)}
+.dlg{padding:16px}
+.dlg h2{font-size:16px;margin:0 0 8px;color:var(--ink-strong)}
+.dlg h3{font-size:14px;margin:14px 0 6px;color:var(--ink-strong)}
+.dlg p{margin:0 0 10px;font-size:14px}
+.dlg table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:10px}
+.dlg td,.dlg th{padding:6px 8px;border-top:1px solid var(--line);text-align:left;vertical-align:top}
+.dlg th{font-size:12px;color:var(--muted);font-weight:500}
+.dlg tr.now td{background:var(--noz-soft);font-weight:700;color:var(--ink-strong)}
+.dlg .acts{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:8px}
+.dlg .acts.l{justify-content:flex-start}
+.gs{width:4.2em;border:1px solid var(--line);background:var(--plate);border-radius:2px;padding:4px 6px;text-align:right}
+.gt{width:100%;border:1px solid var(--line);background:var(--plate);border-radius:2px;padding:4px 8px}
+.stl{max-height:40vh;overflow:auto}
 .hidden{display:none!important}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>人物ポジショニングマップ</h1>
-  <p class="lead">気持ちと機会の2軸で知り合いを整理し、時間の使い方のズレに気づくための個人用ツール。データはこの端末の中だけに保存されます。</p>
+  <div class="top">
+    <h1>人物ポジショニングマップ</h1>
+    <div class="acts">
+      <button class="btn main" id="b-add">＋ 人を追加</button>
+      <button class="btn" id="b-png">画像で保存</button>
+      <button class="btn" id="b-set">設定</button>
+    </div>
+  </div>
 
   <div class="bar">
-    <button class="primary" id="btn-add">＋ 人を追加</button>
-    <button id="btn-snap">スナップショット保存</button>
-    <button id="btn-png">画像で保存</button>
-    <button id="btn-csv-out">CSV出力</button>
-    <button id="btn-csv-in">CSV読込</button>
-    <input type="file" id="file-csv" accept=".csv,text/csv" class="hidden">
+    <div class="grp"><span class="axis">縦軸 大切にしたい</span><button class="q" data-help="axisE" aria-label="縦軸の説明">?</button></div>
+    <div class="grp"><span class="axis">横軸 大切にすべき</span><button class="q" data-help="axisO" aria-label="横軸の説明">?</button></div>
+    <div class="grp">
+      <label class="sw"><input type="checkbox" id="t-links" checked><span class="tr"></span>つながりの線</label>
+      <button class="q" data-help="links" aria-label="つながりの説明">?</button>
+    </div>
+    <div class="grp">
+      <label class="sw"><input type="checkbox" id="t-trail" checked><span class="tr"></span>動きの軌跡</label>
+      <button class="q" data-help="trail" aria-label="軌跡の説明">?</button>
+    </div>
+    <div class="grp"><span class="axis">ハイライト</span><button class="q" data-help="highlight" aria-label="ハイライトの説明">?</button></div>
   </div>
 
-  <section class="card insight" id="insight"></section>
-
-  <div class="tabs" role="tablist">
-    <button role="tab" id="tab-map" aria-selected="true">マップ</button>
-    <button role="tab" id="tab-list" aria-selected="false">一覧</button>
+  <div class="grid">
+    <section class="card">
+      <div id="map"></div>
+      <p class="hint">点を押すと、その人とつながる人が濃くなります。線の太さと濃さがつながりの強さ(0〜100)です。</p>
+    </section>
+    <aside class="card" id="panel" aria-live="polite"></aside>
   </div>
-
-  <section id="pane-map" class="card">
-    <div class="row">
-      <label for="snap-select" style="font-size:13px;color:var(--sub)">過去と比較</label>
-      <select id="snap-select"></select>
-      <button id="btn-snap-del" class="hidden">このスナップショットを削除</button>
-    </div>
-    <div id="map"></div>
-    <p class="note" id="map-note"></p>
-    <ul class="changes" id="changes"></ul>
-  </section>
-
-  <section id="pane-list" class="hidden">
-    <div class="row">
-      <label for="sort-select" style="font-size:13px;color:var(--sub)">並べ替え</label>
-      <select id="sort-select">
-        <option value="old">最後に会った日（古い順）</option>
-        <option value="new">最後に会った日（新しい順）</option>
-        <option value="name">名前順</option>
-      </select>
-    </div>
-    <div id="list"></div>
-  </section>
 </div>
 
-<dialog id="dlg">
-  <form class="edit" id="form" method="dialog" novalidate>
-    <h2 id="dlg-title">人を追加</h2>
-    <label class="f">名前（イニシャル可）
-      <input type="text" id="f-name" maxlength="40" autocomplete="off">
-    </label>
-    <label class="f">大切にしたい（感情） 1〜5
-      <div class="slider">
-        <input type="range" id="f-emotion" min="1" max="5" step="1" value="3">
-        <output id="f-emotion-out">3</output>
-      </div>
-    </label>
-    <fieldset>
-      <legend>大切にすべき（機会）：<span id="f-score">0</span> / 4</legend>
-      <label><input type="checkbox" class="opp"> イベントに誘える</label>
-      <label><input type="checkbox" class="opp"> 仕事の可能性がある</label>
-      <label><input type="checkbox" class="opp"> 人を紹介してくれそう</label>
-      <label><input type="checkbox" class="opp"> 情報や知識をくれる</label>
-    </fieldset>
-    <label class="f">最後に会った日
-      <div class="row" style="margin:0">
-        <input type="date" id="f-last" style="flex:1;border:1px solid var(--line);border-radius:8px;padding:8px;background:var(--bg);font-size:16px;min-height:40px">
-        <button type="button" id="f-today">今日</button>
-      </div>
-    </label>
-    <label class="f">メモ
-      <textarea id="f-memo" maxlength="500"></textarea>
-    </label>
-    <div class="actions">
-      <button type="button" id="f-del" class="danger">削除</button>
-      <span class="sp"></span>
-      <button type="button" id="f-cancel">キャンセル</button>
-      <button type="submit" class="primary" id="f-save">保存</button>
-    </div>
-  </form>
-</dialog>
+<dialog id="help"><div class="dlg">
+  <h2 id="help-t"></h2>
+  <div id="help-b"></div>
+  <div class="acts"><button class="btn hidden" id="help-set">目安を変更する</button><button class="btn main" id="help-x">閉じる</button></div>
+</div></dialog>
+
+<dialog id="set"><div class="dlg">
+  <h2>設定</h2>
+  <h3>関係の強さの目安</h3>
+  <p>「?」を押したときに出る説明です。左の数字からその段階が始まります。</p>
+  <div class="stl"><table><thead><tr><th>から</th><th>説明</th><th></th></tr></thead><tbody id="set-rows"></tbody></table></div>
+  <div class="acts l"><button class="btn" id="set-add">段階を追加</button><button class="btn" id="set-reset">初期値に戻す</button></div>
+  <h3>データ(この端末の中だけに保存されています)</h3>
+  <p>バックアップは、人・つながり・履歴・目安をまとめた1つのファイルです。</p>
+  <div class="acts l">
+    <button class="btn" id="s-export">バックアップを書き出す</button>
+    <button class="btn" id="s-import">バックアップを読み込む</button>
+    <button class="btn" id="s-wipe">全データを削除</button>
+    <input type="file" id="s-file" accept=".json,application/json" class="hidden">
+  </div>
+  <p id="s-msg" style="font-size:13px;color:var(--muted);margin-top:8px"></p>
+  <div class="acts"><button class="btn main" id="set-x">閉じる</button></div>
+</div></dialog>
 
 <script>
 (function(){
 'use strict';
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad=n=>String(n).padStart(2,'0');
+const ymd=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const today=()=>ymd(new Date());
+const fmtD=d=>d.replace(/-/g,'/');
+const fmtJP=d=>d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日 '+pad(d.getHours())+':'+pad(d.getMinutes())+' 時点';
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 
-/* ---------- 定数 ---------- */
-const STORE_KEY = 'positioning-map.v1';
-const CENTER_E = 3;      // 縦軸の中央線（感情）
-const CENTER_O = 2;      // 横軸の中央線（機会）
-const STALE_DAYS = 90;   // 「最近会えていない」の閾値
-// 中央線上の人は低い側（左・下）に入れる。変えたい場合は quadOf の > を >= にする。
-const OPP_LABELS = ['イベントに誘える','仕事の可能性がある','人を紹介してくれそう','情報や知識をくれる'];
-const QUADS = {
-  tr:{name:'一番大事な人',   sub:'一緒に挑戦したい'},
-  tl:{name:'純粋に大切な人', sub:'損得で見ない'},
-  br:{name:'縁をつなぐ人',   sub:'定期的に連絡・誘う'},
-  bl:{name:'自然体でいい人', sub:'無理せず付き合う'}
-};
-const QUAD_ORDER = ['tr','tl','br','bl'];
-const FONT = '"Hiragino Sans","Yu Gothic UI","Meiryo","Noto Sans JP",sans-serif';
+const OPP=['イベントに誘える','仕事の可能性がある','人を紹介してくれそう','情報や知識をくれる'];
+const Q={tr:['一番大事な人','一緒に挑戦したい'],tl:['純粋に大切な人','損得で見ない'],br:['縁をつなぐ人','定期的に連絡・誘う'],bl:['自然体でいい人','無理せず付き合う']};
+const DEF_GUIDE=[
+ {s:0,t:'知らない'},{s:1,t:'名前を知っている'},{s:11,t:'Instagramなどでつながっている'},
+ {s:21,t:'会話をしたことがある'},{s:31,t:'何度か会話したことがある'},{s:41,t:'個別にやりとりしたことがある'},
+ {s:51,t:'二人など少人数で会ったことがある'},{s:61,t:'何度か会ったことがある'},{s:71,t:'悩みや本音を話せる'},
+ {s:81,t:'困ったときに頼れる'},{s:91,t:'親友'},{s:100,t:'家族レベル'}];
+const cloneGuide=()=>DEF_GUIDE.map(g=>Object.assign({},g));
 
-const PALETTES = {
-  light:{bg:'#ffffff',plot:'#faf9f7',axis:'#b9b5ad',grid:'#e6e3dd',text:'#2b2b2b',sub:'#76726b',
-         dot:'#8a8680',accent:'#c4572d',tint:'rgba(196,87,45,0.09)'},
-  dark: {bg:'#1f1f21',plot:'#262628',axis:'#5a5a60',grid:'#333337',text:'#e8e6e1',sub:'#9a968f',
-         dot:'#8d8a84',accent:'#e8875c',tint:'rgba(232,135,92,0.14)'}
-};
-const darkMQ = window.matchMedia('(prefers-color-scheme: dark)');
-const curPal = () => darkMQ.matches ? PALETTES.dark : PALETTES.light;
-
-/* ---------- ユーティリティ ---------- */
-const $ = id => document.getElementById(id);
-const pad = n => String(n).padStart(2,'0');
-const ymd = d => d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
-const fmtJP = d => d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日 '+pad(d.getHours())+':'+pad(d.getMinutes())+' 時点';
-const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
-const oppScore = p => p.opp.filter(Boolean).length;
-const quadOf = (e,o) => (e > CENTER_E ? 't' : 'b') + (o > CENTER_O ? 'r' : 'l');
-const clamp = (v,a,b) => Math.min(b, Math.max(a, v));
-
-function daysSince(s){
-  if(!s) return null;
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
-  if(!m) return null;
-  const t = new Date(+m[1], +m[2]-1, +m[3]);
-  const n = new Date();
-  const today = new Date(n.getFullYear(), n.getMonth(), n.getDate());
-  return Math.round((today - t) / 864e5);
+/* ---------- 保存(ここだけがデータの出入り口。後でSupabaseに差し替える) ---------- */
+const KEY='positioning-map.v2';
+const S={people:[],links:{},hist:{},guide:cloneGuide(),showLinks:true,showTrail:true,sel:null};
+let warned=false;
+function snapshot(){return {v:2,people:S.people,links:S.links,hist:S.hist,guide:S.guide,showLinks:S.showLinks,showTrail:S.showTrail}}
+function persist(){
+  try{localStorage.setItem(KEY,JSON.stringify(snapshot()))}
+  catch(e){if(!warned){warned=true;alert('この環境ではデータを保存できません。設定からバックアップを書き出してください。')}}
 }
-function normDate(v){
-  const m = /^\s*(\d{4})[\/\-.年](\d{1,2})[\/\-.月](\d{1,2})/.exec(v || '');
-  return m ? m[1]+'-'+pad(+m[2])+'-'+pad(+m[3]) : '';
+function apply(d){
+  if(!d||!Array.isArray(d.people))return false;
+  S.people=d.people.map(p=>({id:String(p.id),name:String(p.name||'名前なし'),e:Math.min(5,Math.max(1,+p.e||3)),
+    opp:[0,1,2,3].map(i=>p.opp&&p.opp[i]?1:0),memo:String(p.memo||'')}));
+  S.links=d.links&&typeof d.links==='object'?d.links:{};
+  S.hist=d.hist&&typeof d.hist==='object'?d.hist:{};
+  S.guide=Array.isArray(d.guide)&&d.guide.length&&d.guide[0].s===0?d.guide:cloneGuide();
+  S.showLinks=d.showLinks!==false;S.showTrail=d.showTrail!==false;
+  return true;
 }
-const isStale = p => quadOf(p.emotion, oppScore(p)) === 'tl' && (daysSince(p.last) ?? -1) >= STALE_DAYS;
+function restore(){try{const r=localStorage.getItem(KEY);if(r)apply(JSON.parse(r))}catch(e){}}
 
-/* ---------- 状態と保存 ---------- */
-let state = {people:[], snapshots:[]};
-const view = {tab:'map', snapId:'', sort:'old'};
-let saveWarned = false;
+/* ---------- 基本の計算 ---------- */
+const byId=id=>S.people.find(p=>p.id===id);
+const score=p=>p.opp.reduce((a,b)=>a+(b?1:0),0);
+const quad=(e,o)=>(e>3?'t':'b')+(o>2?'r':'l');
+const lk=(a,b)=>a<b?a+'|'+b:b+'|'+a;
+const strength=(a,b)=>S.links[lk(a,b)]||0;
+function tierIndex(v){let k=0;S.guide.forEach((g,i)=>{if(g.s<=v)k=i});return k}
+const tierText=v=>S.guide[tierIndex(v)].t;
 
-function load(){
-  try{
-    const raw = localStorage.getItem(STORE_KEY);
-    if(raw){
-      const d = JSON.parse(raw);
-      state.people = Array.isArray(d.people) ? d.people : [];
-      state.snapshots = Array.isArray(d.snapshots) ? d.snapshots : [];
-    }
-  }catch(e){}
-}
-function save(){
-  try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
-  catch(e){
-    if(!saveWarned){ saveWarned = true; alert('この環境ではデータを保存できません（プライベートモードなど）。CSV出力でバックアップしてください。'); }
+/* ---------- 「?」の説明 ---------- */
+function helpData(key,v){
+  const H={
+   axisE:['縦軸：大切にしたい','<p>あなたの<b>気持ち</b>の強さです。損得は考えず、気持ちだけで付けます。</p><table><tr><th>値</th><th>目安</th></tr><tr><td>1</td><td>あまり意識しない</td></tr><tr><td>2</td><td>少し気になる</td></tr><tr><td>3</td><td>ふつうに好意がある</td></tr><tr><td>4</td><td>大切にしたい</td></tr><tr><td>5</td><td>とても大切にしたい</td></tr></table><p>4〜5が上側、1〜3が下側です。</p>'],
+   axisO:['横軸：大切にすべき','<p>次の4項目のうち、当てはまる数(0〜4)です。多いほど右になります。</p><table>'+OPP.map(t=>'<tr><td>□</td><td>'+t+'</td></tr>').join('')+'</table><p>「この縁を活かすべきか」という目安で、気持ちとは別に付けます。3〜4が右側、0〜2が左側です。</p>'],
+   links:['つながりの線','<p>知り合い同士の関係の強さを、あなたの主観で0〜100の数字にします。強いほど線が太く濃くなります。</p><p>0は「線なし」です。スイッチで、線をマップに出すかどうかを選べます。</p>'],
+   trail:['動きの軌跡','<p>大切にしたい・大切にすべきを変えるたびに、変更前の位置が記録されます。</p><p>人を選ぶと、その人の点がどう動いてきたかを矢印と月で表示します。選んでいないときは、全員の軌跡を薄く表示します。</p>'],
+   highlight:['ハイライト','<p>点を押すと、その人とつながっている人だけが濃くなり、他は薄くなります。選んだ人はオレンジで囲まれ、その人の線には強さの数字が付きます。</p><p>同じ点をもう一度押すか「×」で解除します。</p>']
+  };
+  if(key==='strength'){
+    const cur=v==null?-1:tierIndex(v);
+    const rows=S.guide.map((g,i)=>{const e=i+1<S.guide.length?S.guide[i+1].s-1:g.s;
+      return '<tr class="'+(i===cur?'now':'')+'"><td style="white-space:nowrap">'+(e>g.s?g.s+'〜'+e:g.s)+'</td><td>'+esc(g.t)+'</td></tr>'}).join('');
+    return ['関係の強さ（0〜100）','<p>あなたの主観で付ける数字です。'+(v==null?'':'いまは <b>'+v+'</b> で、色の付いた行に当たります。')+'</p><table><tr><th>範囲</th><th>目安</th></tr>'+rows+'</table>',true];
   }
+  return H[key];
+}
+function openHelp(key,v){
+  const d=helpData(key,v);
+  $('help-t').textContent=d[0];$('help-b').innerHTML=d[1];$('help-set').classList.toggle('hidden',!d[2]);
+  $('help').showModal();
 }
 
-/* ---------- マップ描画（画面・画像で共通） ---------- */
-// 同じ座標の人を小さな円周上にずらす
+/* ---------- マップ(画面と画像で同じ描画を使う) ---------- */
+const LIGHT={plate:'#f4f4f3',raised:'#ffffff',line:'#dcdddb',grid:'#e8e8e6',plot:'#fafaf9',strong:'#2a2c2e',ink:'#3a3c3f',muted:'#6b6e72',dot:'#8a8d91',noz:'#f26522',nozText:'#b4470f',nozSoft:'#fce4d6'};
+function readPal(){
+  const cs=getComputedStyle(document.documentElement),g=n=>cs.getPropertyValue(n).trim();
+  return {plate:g('--plate'),raised:g('--raised'),line:g('--line'),grid:g('--grid'),plot:g('--plot'),strong:g('--ink-strong'),ink:g('--ink'),
+    muted:g('--muted'),dot:g('--dot'),noz:g('--noz'),nozText:g('--noz-text'),nozSoft:g('--noz-soft')};
+}
 function offsets(items){
-  const g = {}, out = {};
-  items.forEach(it => { (g[it.e+','+it.o] = g[it.e+','+it.o] || []).push(it); });
-  Object.values(g).forEach(a => {
-    const n = a.length;
-    a.forEach((it,i) => {
-      if(n === 1){ out[it.id] = [0,0]; return; }
-      const r = 8 + n*2.5, ang = -Math.PI/2 + 2*Math.PI*i/n;
-      out[it.id] = [Math.cos(ang)*r, Math.sin(ang)*r];
-    });
-  });
+  const g={},out={};
+  items.forEach(it=>{(g[it.e+','+it.o]=g[it.e+','+it.o]||[]).push(it)});
+  Object.values(g).forEach(a=>{const n=a.length;a.forEach((it,i)=>{
+    if(n===1){out[it.id]=[0,0];return}
+    const r=8+n*2.5,ang=-Math.PI/2+2*Math.PI*i/n;out[it.id]=[Math.cos(ang)*r,Math.sin(ang)*r]})});
   return out;
 }
-
-// o: {W,H,s,pal,items:[{id,name,e,o,flag}], cur:{id:{e,o,dx,dy}}|null, header:{h,title,stamp,note}|null}
 function buildSVG(o){
-  const {W,H,s,pal,items,cur,header} = o;
-  const top = header ? header.h : 0;
-  const ml = 44*s, mr = 14*s, mt = top + 14*s, mb = 42*s;
-  const pw = W - ml - mr, ph = H - mt - mb;
-  const X0=-0.8, X1=4.8, Y0=0.2, Y1=5.8;
-  const px = v => ml + (v-X0)/(X1-X0)*pw;
-  const py = v => mt + (Y1-v)/(Y1-Y0)*ph;
-  const cx = px(CENTER_O), cy = py(CENTER_E);
-  const off = offsets(items);
-  const f = (n) => n.toFixed(1);
-  let g = '';
-
-  g += '<rect width="'+W+'" height="'+H+'" fill="'+pal.bg+'"/>';
-  if(header){
-    g += '<text x="'+ml+'" y="38" font-size="26" font-weight="700" fill="'+pal.text+'">'+esc(header.title)+'</text>';
-    g += '<text x="'+ml+'" y="64" font-size="17" fill="'+pal.text+'">'+esc(header.stamp)+'</text>';
-    if(header.note) g += '<text x="'+ml+'" y="86" font-size="13" fill="'+pal.sub+'">'+esc(header.note)+'</text>';
+  const {W,H,s,pal,hdr,hits}=o;
+  const k=n=>n*s,f=n=>n.toFixed(1);
+  const top=hdr?hdr.h:0;
+  const ml=k(44),mr=k(14),mt=top+k(14),mb=k(42),pw=W-ml-mr,ph=H-mt-mb;
+  const X0=-.8,X1=4.8,Y0=.2,Y1=5.8;
+  const px=v=>ml+(v-X0)/(X1-X0)*pw,py=v=>mt+(Y1-v)/(Y1-Y0)*ph;
+  const off=offsets(S.people.map(p=>({id:p.id,e:p.e,o:score(p)})));
+  const pos=id=>{const p=byId(id);return[px(score(p))+off[id][0]*s,py(p.e)+off[id][1]*s]};
+  const sel=S.sel&&byId(S.sel)?S.sel:null;
+  const cx=px(2),cy=py(3);
+  const halo=(c)=>' stroke="'+c+'" stroke-width="'+f(k(3))+'" paint-order="stroke" stroke-linejoin="round"';
+  const tx=(x,y,t,size,fill,extra)=>'<text x="'+f(x)+'" y="'+f(y)+'" font-size="'+f(k(size))+'" fill="'+fill+'" '+(extra||'')+'>'+t+'</text>';
+  let g='<rect width="'+W+'" height="'+H+'" fill="'+pal.raised+'"/>';
+  if(hdr){
+    g+=tx(ml,k(30),esc(hdr.title),20,pal.strong,'font-weight="500" letter-spacing="'+f(k(1.2))+'"');
+    g+='<rect x="'+f(ml)+'" y="'+f(k(38))+'" width="'+f(k(36))+'" height="'+f(k(3))+'" fill="'+pal.noz+'"/>';
+    g+=tx(ml,k(66),esc(hdr.stamp),14,pal.ink);
+    if(hdr.note)g+=tx(ml,k(84),esc(hdr.note),11,pal.muted);
   }
-  g += '<rect x="'+f(ml)+'" y="'+f(mt)+'" width="'+f(pw)+'" height="'+f(ph)+'" fill="'+pal.plot+'" stroke="'+pal.grid+'"/>';
-  g += '<rect x="'+f(cx)+'" y="'+f(mt)+'" width="'+f(ml+pw-cx)+'" height="'+f(cy-mt)+'" fill="'+pal.tint+'"/>';
-
-  // 目盛り
-  for(let v=0; v<=4; v++){
-    g += '<line x1="'+f(px(v))+'" x2="'+f(px(v))+'" y1="'+f(mt)+'" y2="'+f(mt+ph)+'" stroke="'+pal.grid+'" stroke-width="1"/>';
-    g += '<text x="'+f(px(v))+'" y="'+f(mt+ph+16*s)+'" font-size="'+f(11*s)+'" text-anchor="middle" fill="'+pal.sub+'">'+v+'</text>';
+  g+='<rect x="'+f(ml)+'" y="'+f(mt)+'" width="'+f(pw)+'" height="'+f(ph)+'" fill="'+pal.plot+'" stroke="'+pal.line+'"/>';
+  g+='<rect x="'+f(cx)+'" y="'+f(mt)+'" width="'+f(ml+pw-cx)+'" height="'+f(cy-mt)+'" fill="'+pal.nozSoft+'" opacity=".55"/>';
+  for(let v=0;v<=4;v++){
+    g+='<line x1="'+f(px(v))+'" x2="'+f(px(v))+'" y1="'+f(mt)+'" y2="'+f(mt+ph)+'" stroke="'+pal.grid+'"/>';
+    g+=tx(px(v),mt+ph+k(16),v,11,pal.muted,'text-anchor="middle"');
   }
-  for(let v=1; v<=5; v++){
-    g += '<line x1="'+f(ml)+'" x2="'+f(ml+pw)+'" y1="'+f(py(v))+'" y2="'+f(py(v))+'" stroke="'+pal.grid+'" stroke-width="1"/>';
-    g += '<text x="'+f(ml-8*s)+'" y="'+f(py(v)+4*s)+'" font-size="'+f(11*s)+'" text-anchor="end" fill="'+pal.sub+'">'+v+'</text>';
+  for(let v=1;v<=5;v++){
+    g+='<line x1="'+f(ml)+'" x2="'+f(ml+pw)+'" y1="'+f(py(v))+'" y2="'+f(py(v))+'" stroke="'+pal.grid+'"/>';
+    g+=tx(ml-k(8),py(v)+k(4),v,11,pal.muted,'text-anchor="end"');
   }
-  // 中央線
-  g += '<line x1="'+f(cx)+'" x2="'+f(cx)+'" y1="'+f(mt)+'" y2="'+f(mt+ph)+'" stroke="'+pal.axis+'" stroke-width="1.5"/>';
-  g += '<line x1="'+f(ml)+'" x2="'+f(ml+pw)+'" y1="'+f(cy)+'" y2="'+f(cy)+'" stroke="'+pal.axis+'" stroke-width="1.5"/>';
-
-  // 軸ラベル
-  g += '<text x="'+f(ml+pw/2)+'" y="'+f(mt+ph+34*s)+'" font-size="'+f(12*s)+'" text-anchor="middle" fill="'+pal.sub+'">大切にすべき（機会）　0〜4 →</text>';
-  g += '<text transform="translate('+f(13*s)+' '+f(mt+ph/2)+') rotate(-90)" font-size="'+f(12*s)+'" text-anchor="middle" fill="'+pal.sub+'">大切にしたい（感情）　1〜5 →</text>';
-
-  // 象限ラベル
-  const qx = {l:ml+8*s, r:ml+pw-8*s}, qa = {l:'start', r:'end'};
-  const qy = {t:mt+16*s, b:mt+ph-20*s};
-  QUAD_ORDER.forEach(k => {
-    const v = k[0], h = k[1];
-    const col = k === 'tr' ? pal.accent : pal.sub;
-    g += '<text x="'+f(qx[h])+'" y="'+f(qy[v])+'" font-size="'+f(12*s)+'" font-weight="700" text-anchor="'+qa[h]+'" fill="'+col+'">'+QUADS[k].name+'</text>';
-    g += '<text x="'+f(qx[h])+'" y="'+f(qy[v]+13*s)+'" font-size="'+f(9.5*s)+'" text-anchor="'+qa[h]+'" fill="'+col+'">'+QUADS[k].sub+'</text>';
+  g+='<line x1="'+f(cx)+'" x2="'+f(cx)+'" y1="'+f(mt)+'" y2="'+f(mt+ph)+'" stroke="'+pal.muted+'" stroke-width="'+f(k(1.3))+'" opacity=".6"/>';
+  g+='<line x1="'+f(ml)+'" x2="'+f(ml+pw)+'" y1="'+f(cy)+'" y2="'+f(cy)+'" stroke="'+pal.muted+'" stroke-width="'+f(k(1.3))+'" opacity=".6"/>';
+  g+=tx(ml+pw/2,mt+ph+k(34),'大切にすべき（機会 0〜4）→',12,pal.muted,'text-anchor="middle"');
+  g+=tx(0,0,'大切にしたい（気持ち 1〜5）→',12,pal.muted,'text-anchor="middle" transform="translate('+f(k(13))+' '+f(mt+ph/2)+') rotate(-90)"');
+  const qx={l:ml+k(8),r:ml+pw-k(8)},qa={l:'start',r:'end'},qy={t:mt+k(16),b:mt+ph-k(20)};
+  ['tr','tl','br','bl'].forEach(q=>{
+    const c=q==='tr'?pal.nozText:pal.muted;
+    g+=tx(qx[q[1]],qy[q[0]],Q[q][0],12,c,'font-weight="700" text-anchor="'+qa[q[1]]+'"');
+    g+=tx(qx[q[1]],qy[q[0]]+k(13),Q[q][1],9.5,c,'text-anchor="'+qa[q[1]]+'"');
   });
 
-  // 変化の矢印（スナップショット表示時）
-  const pos = it => [px(it.o)+off[it.id][0]*s, py(it.e)+off[it.id][1]*s];
-  if(cur){
-    items.forEach(it => {
-      const c = cur[it.id];
-      if(!c || (c.e === it.e && c.o === it.o)) return;
-      const [x1,y1] = pos(it);
-      const x2 = px(c.o)+c.dx*s, y2 = py(c.e)+c.dy*s;
-      const len = Math.hypot(x2-x1, y2-y1) || 1;
-      const ux = (x2-x1)/len, uy = (y2-y1)/len;
-      const r = 5*s, ex = x2-ux*r, ey = y2-uy*r;     // 矢印の先端は現在位置の輪の手前
-      const sx = x1+ux*6*s, sy = y1+uy*6*s;
-      const hs = 7*s;
-      const hx = ex-ux*hs, hy = ey-uy*hs, nx = -uy*hs*0.5, ny = ux*hs*0.5;
-      g += '<line x1="'+f(sx)+'" y1="'+f(sy)+'" x2="'+f(hx)+'" y2="'+f(hy)+'" stroke="'+pal.text+'" stroke-width="'+f(1.5*s)+'"/>';
-      g += '<polygon points="'+f(ex)+','+f(ey)+' '+f(hx+nx)+','+f(hy+ny)+' '+f(hx-nx)+','+f(hy-ny)+'" fill="'+pal.text+'"/>';
-      g += '<circle cx="'+f(x2)+'" cy="'+f(y2)+'" r="'+f(4.5*s)+'" fill="none" stroke="'+pal.text+'" stroke-width="'+f(1.5*s)+'"/>';
+  if(S.showLinks){
+    const mids=[];
+    Object.keys(S.links).forEach(key=>{
+      const v=S.links[key];if(!v)return;
+      const [a,b]=key.split('|');if(!byId(a)||!byId(b))return;
+      const [x1,y1]=pos(a),[x2,y2]=pos(b);
+      const on=sel&&(a===sel||b===sel);
+      const w=k(.8+v/100*5),op=sel?(on?.95:.1):(.3+.55*v/100);
+      g+='<line x1="'+f(x1)+'" y1="'+f(y1)+'" x2="'+f(x2)+'" y2="'+f(y2)+'" stroke="'+(on?pal.noz:pal.muted)+'" stroke-width="'+f(w)+'" stroke-linecap="round" opacity="'+op+'"/>';
+      if(on)mids.push([(x1+x2)/2,(y1+y2)/2,v]);
     });
+    mids.forEach(m=>{g+=tx(m[0],m[1]+k(4),m[2],11,pal.nozText,'text-anchor="middle" font-weight="700"'+halo(pal.plot))});
   }
 
-  // 点と名前
-  items.forEach(it => {
-    const [x,y] = pos(it);
-    const isTR = quadOf(it.e, it.o) === 'tr';
-    const fill = isTR ? pal.accent : pal.dot;
-    if(it.flag) g += '<circle cx="'+f(x)+'" cy="'+f(y)+'" r="'+f(10*s)+'" fill="none" stroke="'+pal.text+'" stroke-width="'+f(1.5*s)+'" stroke-dasharray="'+f(3*s)+' '+f(2.5*s)+'"/>';
-    g += '<circle cx="'+f(x)+'" cy="'+f(y)+'" r="'+f(6*s)+'" fill="'+fill+'"/>';
-    const left = x > ml + pw*0.78;
-    g += '<text x="'+f(left ? x-10*s : x+10*s)+'" y="'+f(y+4*s)+'" font-size="'+f(11.5*s)+'" text-anchor="'+(left?'end':'start')+'" fill="'+pal.text+'" stroke="'+pal.plot+'" stroke-width="'+f(3*s)+'" paint-order="stroke" stroke-linejoin="round">'+esc(it.name)+'</text>';
-    g += '<circle class="hit" data-id="'+esc(it.id)+'" cx="'+f(x)+'" cy="'+f(y)+'" r="'+f(15*s)+'" fill="transparent" style="cursor:pointer"/>';
+  function trail(id,faint){
+    const h=S.hist[id];if(!h||!h.length)return'';
+    const p=byId(id),col=faint?pal.muted:pal.noz,op=faint?.4:.95;
+    const pts=h.map(x=>[px(x.o),py(x.e),x.d]).concat([[px(score(p)),py(p.e),null]]);
+    let r='';
+    for(let i=0;i<pts.length-1;i++){
+      const [x1,y1]=pts[i],[x2,y2]=pts[i+1],len=Math.hypot(x2-x1,y2-y1);if(len<2)continue;
+      const ux=(x2-x1)/len,uy=(y2-y1)/len,ex=x2-ux*k(9),ey=y2-uy*k(9),hs=k(7);
+      r+='<line x1="'+f(x1)+'" y1="'+f(y1)+'" x2="'+f(ex-ux*hs)+'" y2="'+f(ey-uy*hs)+'" stroke="'+col+'" stroke-width="'+f(k(1.5))+'" stroke-dasharray="'+f(k(4))+' '+f(k(3))+'" opacity="'+op+'"/>';
+      r+='<polygon points="'+f(ex)+','+f(ey)+' '+f(ex-ux*hs-uy*hs*.5)+','+f(ey-uy*hs+ux*hs*.5)+' '+f(ex-ux*hs+uy*hs*.5)+','+f(ey-uy*hs-ux*hs*.5)+'" fill="'+col+'" opacity="'+op+'"/>';
+    }
+    if(!faint)pts.slice(0,-1).forEach(q=>{
+      r+='<circle cx="'+f(q[0])+'" cy="'+f(q[1])+'" r="'+f(k(4))+'" fill="'+pal.plot+'" stroke="'+col+'" stroke-width="'+f(k(1.5))+'"/>';
+      r+=tx(q[0]+k(7),q[1]-k(6),(+q[2].slice(5,7))+'月',10,pal.muted,halo(pal.plot));
+    });
+    return r;
+  }
+  if(S.showTrail){
+    if(sel)g+=trail(sel,false);
+    else S.people.forEach(p=>{g+=trail(p.id,true)});
+  }
+
+  S.people.forEach(p=>{
+    const [x,y]=pos(p.id);
+    const linked=sel&&strength(sel,p.id)>0,dim=sel&&p.id!==sel&&!linked;
+    g+='<g opacity="'+(dim?.28:1)+'">';
+    if(p.id===sel)g+='<circle cx="'+f(x)+'" cy="'+f(y)+'" r="'+f(k(12.5))+'" fill="none" stroke="'+pal.noz+'" stroke-width="'+f(k(2.5))+'"/>';
+    g+='<circle cx="'+f(x)+'" cy="'+f(y)+'" r="'+f(k(7))+'" fill="'+(p.id===sel?pal.noz:(linked?pal.strong:pal.dot))+'"/>';
+    const left=x>ml+pw*.78;
+    g+=tx(left?x-k(11):x+k(11),y+k(4),esc(p.name),11.5,pal.strong,'text-anchor="'+(left?'end':'start')+'" font-weight="'+(p.id===sel?700:500)+'"'+halo(pal.plot));
+    g+='</g>';
+    if(hits)g+='<circle class="hit" data-id="'+esc(p.id)+'" cx="'+f(x)+'" cy="'+f(y)+'" r="'+f(k(17))+'" fill="transparent" style="cursor:pointer"/>';
   });
-
-  return '<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" font-family=\''+FONT.replace(/"/g,'&quot;')+'\'>'+g+'</svg>';
+  return '<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" font-family="Noto Sans JP, Hiragino Sans, Yu Gothic UI, Meiryo, sans-serif">'+g+'</svg>';
 }
-
-/* ---------- 表示用のデータ組み立て ---------- */
-const currentSnap = () => state.snapshots.find(s => s.id === view.snapId) || null;
-
-function currentItems(){
-  return state.people.map(p => ({id:p.id, name:p.name, e:p.emotion, o:oppScore(p), flag:isStale(p)}));
-}
-function mapModel(){
-  const snap = currentSnap();
-  const curItems = currentItems();
-  if(!snap) return {items:curItems, cur:null, snap:null};
-  const co = offsets(curItems), cur = {};
-  curItems.forEach(it => { cur[it.id] = {e:it.e, o:it.o, dx:co[it.id][0], dy:co[it.id][1]}; });
-  const items = snap.people.map(p => ({id:p.id, name:p.name, e:p.e, o:p.o, flag:false}));
-  return {items, cur, snap};
-}
-
-/* ---------- 画面描画 ---------- */
-function renderInsight(){
-  const stale = state.people.filter(isStale)
-    .sort((a,b) => (daysSince(b.last)) - (daysSince(a.last)));
-  let h;
-  if(!state.people.length){
-    h = '<p class="ok">まだ誰も登録されていません。「＋ 人を追加」から始めましょう。</p>';
-  }else if(!stale.length){
-    h = '<h2>最近会えていない大切な人</h2><p class="ok">該当なし（純粋に大切な人で、'+STALE_DAYS+'日以上会っていない人はいません）</p>';
-  }else{
-    h = '<h2>最近会えていない大切な人（'+stale.length+'人）</h2><ul>' + stale.map(p =>
-      '<li><button class="linkbtn" data-edit="'+esc(p.id)+'" style="border:0;background:none;padding:0;min-height:32px;text-align:left"><b>'+esc(p.name)+'</b></button>'+
-      '<span class="tag">'+daysSince(p.last)+'日会っていない</span></li>').join('') + '</ul>';
-  }
-  $('insight').innerHTML = h;
-}
-
-function mapSize(){
-  const w = Math.max(300, Math.floor($('map').clientWidth || 360));
-  const h = Math.round(w < 560 ? w*1.12 : Math.min(w*0.74, 620));
-  return [w,h];
-}
-
-function renderMap(){
-  const m = mapModel();
-  const [W,H] = mapSize();
-  $('map').innerHTML = buildSVG({W,H,s:1,pal:curPal(),items:m.items,cur:m.cur,header:null});
-
-  const sel = $('snap-select');
-  sel.innerHTML = '<option value="">現在の配置</option>' + state.snapshots.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(s => {
-    const d = new Date(s.date);
-    return '<option value="'+esc(s.id)+'"'+(s.id===view.snapId?' selected':'')+'>'+d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate()+' '+pad(d.getHours())+':'+pad(d.getMinutes())+'（'+s.people.length+'人）</option>';
-  }).join('');
-  $('btn-snap-del').classList.toggle('hidden', !m.snap);
-
-  const ch = $('changes');
-  if(m.snap){
-    $('map-note').textContent = fmtJP(new Date(m.snap.date)) + 'の配置です。● 当時の位置 → ○ 現在の位置（矢印は動いた人のみ）。';
-    const rows = [];
-    let gone = 0;
-    m.snap.people.forEach(p => {
-      const c = m.cur[p.id];
-      if(!c){ gone++; return; }
-      if(c.e === p.e && c.o === p.o) return;
-      const from = QUADS[quadOf(p.e,p.o)].name, to = QUADS[quadOf(c.e,c.o)].name;
-      const parts = [];
-      if(c.e !== p.e) parts.push('感情 '+p.e+'→'+c.e);
-      if(c.o !== p.o) parts.push('機会 '+p.o+'→'+c.o);
-      rows.push('<li><b>'+esc(p.name)+'</b>　'+parts.join('、')+(from!==to?'（'+from+' → '+to+'）':'')+'</li>');
-    });
-    const added = state.people.filter(p => !m.snap.people.some(q => q.id === p.id)).length;
-    const foot = [];
-    if(added) foot.push('当時はいなかった人：'+added+'人');
-    if(gone) foot.push('その後削除された人：'+gone+'人');
-    ch.innerHTML = (rows.length ? rows.join('') : '<li>位置が変わった人はいません。</li>') + (foot.length ? '<li class="m" style="color:var(--sub)">'+foot.join('／')+'</li>' : '');
-  }else{
-    $('map-note').textContent = '点をタップすると詳細と編集画面が開きます。破線の輪は「最近会えていない大切な人」です。';
-    ch.innerHTML = '';
-  }
-}
-
-function renderList(){
-  const groups = {tr:[],tl:[],br:[],bl:[]};
-  state.people.forEach(p => groups[quadOf(p.emotion, oppScore(p))].push(p));
-  const cmp = {
-    old:(a,b)=>{ const x=daysSince(a.last), y=daysSince(b.last);
-      if(x===null && y===null) return a.name.localeCompare(b.name,'ja');
-      if(x===null) return 1; if(y===null) return -1; return y-x; },
-    new:(a,b)=>{ const x=daysSince(a.last), y=daysSince(b.last);
-      if(x===null && y===null) return a.name.localeCompare(b.name,'ja');
-      if(x===null) return 1; if(y===null) return -1; return x-y; },
-    name:(a,b)=>a.name.localeCompare(b.name,'ja')
-  }[view.sort];
-  $('list').innerHTML = QUAD_ORDER.map(k => {
-    const a = groups[k].sort(cmp);
-    return '<div class="group '+k+'"><h3>'+QUADS[k].name+'<small>'+QUADS[k].sub+'・'+a.length+'人</small></h3>' +
-      (a.length ? a.map(p => {
-        const d = daysSince(p.last);
-        const last = p.last ? p.last.replace(/-/g,'/')+'（'+d+'日前）' : '日付未入力';
-        return '<button class="item" data-edit="'+esc(p.id)+'"><span><span class="n">'+esc(p.name)+'</span><br><span class="m">感情 '+p.emotion+'／機会 '+oppScore(p)+'／'+last+'</span></span>'+
-          (isStale(p)?'<span class="tag">要連絡</span>':'')+'</button>';
-      }).join('') : '<div class="empty">該当なし</div>') + '</div>';
-  }).join('');
-}
-
-function render(){
-  renderInsight();
-  renderMap();
-  renderList();
-}
-
-function setTab(t){
-  view.tab = t;
-  $('tab-map').setAttribute('aria-selected', t==='map');
-  $('tab-list').setAttribute('aria-selected', t==='list');
-  $('pane-map').classList.toggle('hidden', t!=='map');
-  $('pane-list').classList.toggle('hidden', t!=='list');
-  if(t==='map') renderMap();
-}
-
-/* ---------- 追加・編集ダイアログ ---------- */
-let editingId = null;
-const dlg = $('dlg');
-const oppBoxes = () => Array.from(document.querySelectorAll('.opp'));
-function updateScore(){ $('f-score').textContent = oppBoxes().filter(b=>b.checked).length; }
-
-function openEdit(id){
-  editingId = id;
-  const p = id ? state.people.find(x => x.id === id) : null;
-  $('dlg-title').textContent = p ? '詳細・編集' : '人を追加';
-  $('f-name').value = p ? p.name : '';
-  $('f-emotion').value = p ? p.emotion : 3;
-  $('f-emotion-out').textContent = $('f-emotion').value;
-  oppBoxes().forEach((b,i) => b.checked = p ? !!p.opp[i] : false);
-  updateScore();
-  $('f-last').value = p ? p.last : '';
-  $('f-memo').value = p ? p.memo : '';
-  $('f-del').classList.toggle('hidden', !p);
-  dlg.showModal();
-  if(!p) $('f-name').focus();
-}
-function closeEdit(){ if(dlg.open) dlg.close(); }
-
-function submitEdit(ev){
-  ev.preventDefault();
-  const name = $('f-name').value.trim();
-  if(!name){ $('f-name').focus(); alert('名前（イニシャル可）を入力してください。'); return; }
-  const rec = {
-    name,
-    emotion: clamp(parseInt($('f-emotion').value,10) || 3, 1, 5),
-    opp: oppBoxes().map(b => b.checked),
-    last: $('f-last').value || '',
-    memo: $('f-memo').value.trim()
-  };
-  if(editingId){
-    Object.assign(state.people.find(x => x.id === editingId), rec);
-  }else{
-    state.people.push(Object.assign({id:uid()}, rec));
-  }
-  save(); closeEdit(); render();
-}
-
-/* ---------- スナップショット ---------- */
-function takeSnapshot(){
-  if(!state.people.length){ alert('保存する人がいません。'); return; }
-  const s = {id:uid(), date:new Date().toISOString(),
-    people: state.people.map(p => ({id:p.id, name:p.name, e:p.emotion, o:oppScore(p)}))};
-  state.snapshots.push(s);
-  view.snapId = '';
-  save(); render();
-  alert('スナップショットを保存しました（'+fmtJP(new Date(s.date)).replace(' 時点','')+'）。');
-}
-function deleteSnapshot(){
-  const s = currentSnap();
-  if(!s || !confirm('このスナップショットを削除しますか？')) return;
-  state.snapshots = state.snapshots.filter(x => x.id !== s.id);
-  view.snapId = '';
-  save(); render();
+function drawMap(){
+  const box=$('map');
+  const W=Math.max(300,Math.floor(box.clientWidth||640));
+  const H=Math.round(W<560?W*1.08:Math.min(W*.8,620));
+  box.innerHTML=buildSVG({W,H,s:1,pal:readPal(),hdr:null,hits:true});
 }
 
 /* ---------- 画像で保存 ---------- */
-function saveImage(){
-  const m = mapModel();
-  if(!m.items.length){ alert('保存する人がいません。'); return; }
-  const when = m.snap ? new Date(m.snap.date) : new Date();
-  const W = 1200, H = 1060, s = 1.5;
-  const svg = buildSVG({W,H,s,pal:PALETTES.light,items:m.items,cur:m.cur,
-    header:{h:104, title:'人物ポジショニングマップ', stamp:fmtJP(when),
-            note:m.snap ? 'スナップショット表示：● 当時の位置 → ○ 現在の位置' : ''}});
-  const img = new Image();
-  img.onload = () => {
-    const c = document.createElement('canvas');
-    c.width = W*2; c.height = H*2;
-    const ctx = c.getContext('2d');
-    ctx.drawImage(img, 0, 0, c.width, c.height);
-    c.toBlob(blob => {
-      if(!blob){ alert('画像の生成に失敗しました。'); return; }
-      download(blob, ymd(when)+'_人物マップ.png');
-    }, 'image/png');
-  };
-  img.onerror = () => alert('画像の生成に失敗しました。');
-  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+function download(blob,name){
+  const url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),2000);
 }
-function download(blob, name){
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = name;
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 2000);
+function savePng(){
+  if(!S.people.length){alert('保存する人がいません。');return}
+  const now=new Date(),W=1200,H=1100;
+  const svg=buildSVG({W,H,s:1.5,pal:LIGHT,hdr:{h:112,title:'人物ポジショニングマップ',stamp:fmtJP(now),
+    note:S.sel&&byId(S.sel)?byId(S.sel).name+' をハイライト中':''},hits:false});
+  const img=new Image();
+  img.onload=()=>{
+    const c=document.createElement('canvas');c.width=W*2;c.height=H*2;
+    c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+    c.toBlob(b=>{if(!b){alert('画像の生成に失敗しました。');return}download(b,ymd(now)+'_人物マップ.png')},'image/png');
+  };
+  img.onerror=()=>alert('画像の生成に失敗しました。');
+  img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
 }
 
-/* ---------- CSV ---------- */
-function toCSV(){
-  const q = v => '"' + String(v).replace(/"/g,'""') + '"';
-  const head = ['id','名前','感情(1-5)'].concat(OPP_LABELS, ['最後に会った日','メモ']);
-  const rows = state.people.map(p => [p.id, p.name, p.emotion]
-    .concat(p.opp.map(b => b ? 1 : 0), [p.last, p.memo]));
-  return '﻿' + [head].concat(rows).map(r => r.map(q).join(',')).join('\r\n');
-}
-function parseCSV(text){
-  text = text.replace(/^﻿/, '');
-  const rows = []; let row = [], cur = '', inQ = false;
-  for(let i=0; i<text.length; i++){
-    const ch = text[i];
-    if(inQ){
-      if(ch === '"'){ if(text[i+1] === '"'){ cur += '"'; i++; } else inQ = false; }
-      else cur += ch;
-    }else if(ch === '"') inQ = true;
-    else if(ch === ','){ row.push(cur); cur = ''; }
-    else if(ch === '\n' || ch === '\r'){
-      if(ch === '\r' && text[i+1] === '\n') i++;
-      row.push(cur); cur = ''; rows.push(row); row = [];
-    }else cur += ch;
+/* ---------- 詳細パネル ---------- */
+function histLines(p){
+  const pts=(S.hist[p.id]||[]).concat([{d:today(),e:p.e,o:score(p)}]);
+  const out=[];
+  for(let i=1;i<pts.length;i++){
+    const a=pts[i-1],b=pts[i],parts=[];
+    if(a.e!==b.e)parts.push('大切にしたい '+a.e+'→'+b.e);
+    if(a.o!==b.o)parts.push('大切にすべき '+a.o+'→'+b.o);
+    if(parts.length)out.push('<li><time>'+fmtD(b.d)+'</time><span>'+parts.join('、')+'</span></li>');
   }
-  if(cur !== '' || row.length){ row.push(cur); rows.push(row); }
-  return rows.filter(r => r.some(c => c.trim() !== ''));
+  const f0=pts[0];
+  return out.reverse().join('')+'<li><time>'+fmtD(f0.d)+'</time><span>記録の開始(大切にしたい '+f0.e+'、大切にすべき '+f0.o+')</span></li>';
 }
-function importCSV(text){
-  const rows = parseCSV(text);
-  if(rows.length < 2){ alert('データ行が見つかりません。'); return; }
-  const head = rows[0].map(h => h.trim());
-  const col = pred => head.findIndex(pred);
-  const iId = col(h => h.toLowerCase() === 'id');
-  const iName = col(h => h === '名前');
-  const iEmo = col(h => h.startsWith('感情'));
-  const iOpp = OPP_LABELS.map(l => col(h => h === l));
-  const iLast = col(h => h === '最後に会った日');
-  const iMemo = col(h => h === 'メモ');
-  if(iName < 0){ alert('「名前」列が見つかりません。1行目は見出しにしてください。'); return; }
-  const yes = v => /^(1|true|yes|y|○|〇|✓|✔|有|はい)$/i.test((v || '').trim());
-  let added = 0, updated = 0;
-  rows.slice(1).forEach(r => {
-    const name = (r[iName] || '').trim();
-    if(!name) return;
-    const emo = clamp(Math.round(parseFloat(r[iEmo])) || 3, 1, 5);
-    const rec = {
-      name, emotion: emo,
-      opp: iOpp.map(i => i >= 0 && yes(r[i])),
-      last: iLast >= 0 ? normDate(r[iLast]) : '',
-      memo: iMemo >= 0 ? (r[iMemo] || '').trim() : ''
-    };
-    const id = iId >= 0 ? (r[iId] || '').trim() : '';
-    const hit = id && state.people.find(p => p.id === id);
-    if(hit){ Object.assign(hit, rec); updated++; }
-    else{ state.people.push(Object.assign({id: id || uid()}, rec)); added++; }
-  });
-  save(); render();
-  alert('CSVを読み込みました。追加 '+added+'件／更新 '+updated+'件（idが一致する行は上書き、削除は反映されません）。');
+function linkRow(p,oid){
+  const o=byId(oid),v=strength(p.id,oid);
+  return '<div class="lrow" data-other="'+esc(oid)+'"><div class="l1"><button class="nm" data-act="goto" data-id="'+esc(oid)+'">'+esc(o.name)+'</button>'+
+   '<input class="snum" type="number" min="0" max="100" value="'+v+'" aria-label="'+esc(o.name)+'との強さ"><button class="q" data-help="strength" data-v="'+v+'" aria-label="強さの説明">?</button></div>'+
+   '<input class="srange" type="range" min="0" max="100" value="'+v+'" aria-label="'+esc(o.name)+'との強さ"><div class="tier">'+esc(tierText(v))+'</div></div>';
+}
+function renderPanel(){
+  const el=$('panel'),p=S.sel&&byId(S.sel);
+  if(!S.people.length){
+    el.innerHTML='<div class="empty">まだ誰も登録されていません。<br>「＋ 人を追加」から始めるか、サンプルで操作を試せます。<div class="acts"><button class="btn main" data-act="new">＋ 人を追加</button><button class="btn" data-act="sample">サンプルを入れる</button></div></div>';
+    return;
+  }
+  if(!p){el.innerHTML='<div class="empty">マップの点を押すと、詳細と「つながっている人」の一覧がここに出ます。</div>';return}
+  const k=quad(p.e,score(p));
+  const linked=S.people.filter(o=>o.id!==p.id&&strength(p.id,o.id)>0).sort((a,b)=>strength(p.id,b.id)-strength(p.id,a.id));
+  const free=S.people.filter(o=>o.id!==p.id&&!strength(p.id,o.id));
+  el.innerHTML=
+   '<div class="ph"><input id="p-name" value="'+esc(p.name)+'" maxlength="40" aria-label="名前"><button class="xbtn" data-act="close" aria-label="選択を解除">×</button></div>'+
+   '<span class="badge '+k+'" id="p-badge">'+Q[k][0]+'</span>'+
+   '<div><h3 style="font-size:14px;margin:0 0 6px;display:flex;align-items:center;gap:8px;color:var(--ink-strong)">大切にしたい（1〜5）<button class="q" data-help="axisE" aria-label="説明">?</button></h3>'+
+   '<div class="slide"><input id="p-e" type="range" min="1" max="5" step="1" value="'+p.e+'"><output id="p-eo">'+p.e+'</output></div></div>'+
+   '<div class="sec"><h3>大切にすべき（<span id="p-os">'+score(p)+'</span>／4）<button class="q" data-help="axisO" aria-label="説明">?</button></h3>'+
+   OPP.map((t,i)=>'<label class="chk"><input type="checkbox" class="p-o" data-i="'+i+'"'+(p.opp[i]?' checked':'')+'>'+t+'</label>').join('')+'</div>'+
+   '<div class="sec"><h3>メモ</h3><textarea id="p-memo" aria-label="メモ">'+esc(p.memo)+'</textarea></div>'+
+   '<div class="sec"><h3>つながっている人（'+linked.length+'人）<button class="q" data-help="strength" aria-label="強さの説明">?</button></h3>'+
+   (linked.length?linked.map(o=>linkRow(p,o.id)).join(''):'<div class="empty" style="padding:6px 0">まだありません。下から追加できます。</div>')+
+   (free.length?'<div class="addrow"><select id="p-add" aria-label="つなげる人">'+free.map(o=>'<option value="'+esc(o.id)+'">'+esc(o.name)+'</option>').join('')+'</select><button class="btn" data-act="addlink">つながりを追加</button></div>':'')+
+   '<div class="hint">数字を0にすると、つながりを外します。</div></div>'+
+   '<div class="sec"><h3>動きの履歴<button class="q" data-help="trail" aria-label="説明">?</button></h3><ul class="hist" id="p-hist">'+histLines(p)+'</ul></div>'+
+   '<div class="sec"><button class="del" data-act="del">この人を削除</button></div>';
+}
+function refreshHead(p){
+  const k=quad(p.e,score(p)),b=$('p-badge');
+  if(b){b.textContent=Q[k][0];b.className='badge '+k}
+  const o=$('p-os');if(o)o.textContent=score(p);
+}
+function pushHist(p,before){
+  if(before.e===p.e&&before.o===score(p))return;
+  (S.hist[p.id]=S.hist[p.id]||[]).push({d:today(),e:before.e,o:before.o});
+}
+
+/* ---------- 設定 ---------- */
+function renderSet(){
+  $('set-rows').innerHTML=S.guide.map((g,i)=>'<tr><td><input class="gs" type="number" min="0" max="100" value="'+g.s+'"'+(i===0?' disabled':'')+' aria-label="開始値"></td>'+
+    '<td><input class="gt" value="'+esc(g.t)+'" aria-label="説明"></td><td>'+(i?'<button class="btn" data-gdel="'+i+'">削除</button>':'')+'</td></tr>').join('');
+}
+function commitSet(){
+  const rows=[...document.querySelectorAll('#set-rows tr')].map(tr=>({s:Math.max(0,Math.min(100,parseInt(tr.querySelector('.gs').value,10)||0)),t:tr.querySelector('.gt').value.trim()||'(説明なし)'}));
+  rows[0].s=0;
+  const seen={};
+  S.guide=rows.sort((a,b)=>a.s-b.s).filter(r=>{if(seen[r.s])return false;seen[r.s]=1;return true});
+  persist();renderSet();renderPanel();
+}
+function setMsg(t){$('s-msg').textContent=t}
+
+/* ---------- サンプル ---------- */
+function loadSample(){
+  apply({people:[
+   {id:'at',name:'A.T',e:5,opp:[1,1,1,0],memo:'一緒に何かやりたい。'},{id:'km',name:'K.M',e:4,opp:[1,1,0,1],memo:''},
+   {id:'sy',name:'S.Y',e:5,opp:[0,0,0,0],memo:'損得なしで大切な人。'},{id:'rn',name:'R.N',e:4,opp:[0,0,0,1],memo:''},
+   {id:'mh',name:'M.H',e:2,opp:[1,1,1,1],memo:'仕事では頼れる。'},{id:'tk',name:'T.K',e:3,opp:[1,0,1,0],memo:''},
+   {id:'ys',name:'Y.S',e:2,opp:[0,0,0,0],memo:''},{id:'ho',name:'H.O',e:4,opp:[1,0,0,0],memo:''},{id:'ni',name:'N.I',e:3,opp:[0,1,1,1],memo:''}],
+   links:{'at|km':72,'at|sy':60,'at|mh':40,'km|rn':35,'rn|sy':90,'ho|sy':45,'mh|ni':55,'mh|tk':18,'ni|tk':25,'tk|ys':8,'km|ni':66,'ho|rn':30},
+   hist:{at:[{d:'2026-03-02',e:3,o:1},{d:'2026-07-18',e:4,o:2}],km:[{d:'2026-04-10',e:3,o:3}],sy:[{d:'2026-03-02',e:4,o:0}],
+         mh:[{d:'2026-05-01',e:4,o:2},{d:'2026-08-20',e:3,o:3}],ni:[{d:'2026-06-01',e:2,o:3}]},
+   guide:S.guide,showLinks:true,showTrail:true});
+  S.sel='at';persist();$('t-links').checked=true;$('t-trail').checked=true;render();
 }
 
 /* ---------- イベント ---------- */
-$('btn-add').onclick = () => openEdit(null);
-$('btn-snap').onclick = takeSnapshot;
-$('btn-snap-del').onclick = deleteSnapshot;
-$('btn-png').onclick = saveImage;
-$('btn-csv-out').onclick = () => {
-  if(!state.people.length){ alert('出力するデータがありません。'); return; }
-  download(new Blob([toCSV()], {type:'text/csv;charset=utf-8'}), ymd(new Date())+'_人物マップ.csv');
-};
-$('btn-csv-in').onclick = () => $('file-csv').click();
-$('file-csv').onchange = ev => {
-  const f = ev.target.files[0];
-  if(!f) return;
-  const rd = new FileReader();
-  rd.onload = () => importCSV(String(rd.result));
-  rd.readAsText(f, 'utf-8');
-  ev.target.value = '';
-};
-$('tab-map').onclick = () => setTab('map');
-$('tab-list').onclick = () => setTab('list');
-$('snap-select').onchange = ev => { view.snapId = ev.target.value; renderMap(); };
-$('sort-select').onchange = ev => { view.sort = ev.target.value; renderList(); };
-
-$('f-emotion').oninput = ev => { $('f-emotion-out').textContent = ev.target.value; };
-oppBoxes().forEach(b => b.onchange = updateScore);
-$('f-today').onclick = () => { $('f-last').value = ymd(new Date()); };
-$('f-cancel').onclick = closeEdit;
-$('f-del').onclick = () => {
-  const p = state.people.find(x => x.id === editingId);
-  if(p && confirm('「'+p.name+'」を削除しますか？')){
-    state.people = state.people.filter(x => x.id !== editingId);
-    save(); closeEdit(); render();
-  }
-};
-$('form').addEventListener('submit', submitEdit);
-
-document.addEventListener('click', ev => {
-  const hit = ev.target.closest && ev.target.closest('.hit');
-  if(hit){
-    const id = hit.getAttribute('data-id');
-    if(state.people.some(p => p.id === id)) openEdit(id);
-    else alert('この人は現在のデータから削除されています。');
+function render(){renderPanel();drawMap()}
+function select(id){S.sel=id;renderPanel();drawMap()}
+function addPerson(){
+  const id='n'+uid();
+  S.people.push({id,name:'新しい人',e:3,opp:[0,0,0,0],memo:''});
+  persist();select(id);
+  const n=$('p-name');if(n){n.focus();n.select()}
+  if(window.innerWidth<=860)$('panel').scrollIntoView({behavior:'smooth',block:'start'});
+}
+document.addEventListener('click',ev=>{
+  const t=ev.target;
+  const hit=t.closest&&t.closest('.hit');
+  if(hit){const id=hit.getAttribute('data-id');select(S.sel===id?null:id);
+    if(S.sel&&window.innerWidth<=860)$('panel').scrollIntoView({behavior:'smooth',block:'start'});return}
+  const q=t.closest&&t.closest('[data-help]');
+  if(q){const key=q.getAttribute('data-help'),v=q.getAttribute('data-v');openHelp(key,v==null?null:+v);return}
+  const a=t.closest&&t.closest('[data-act]');
+  if(a){
+    const act=a.getAttribute('data-act'),p=S.sel&&byId(S.sel);
+    if(act==='close')select(null);
+    if(act==='new')addPerson();
+    if(act==='sample')loadSample();
+    if(act==='goto')select(a.getAttribute('data-id'));
+    if(act==='addlink'&&p){S.links[lk(p.id,$('p-add').value)]=1;persist();renderPanel();drawMap()}
+    if(act==='del'&&p){
+      if(a.getAttribute('data-ok')!=='1'){a.textContent='もう一度押すと削除します';a.setAttribute('data-ok','1');return}
+      S.people=S.people.filter(x=>x.id!==p.id);
+      Object.keys(S.links).forEach(key=>{if(key.split('|').includes(p.id))delete S.links[key]});
+      delete S.hist[p.id];persist();select(null);
+    }
     return;
   }
-  const b = ev.target.closest && ev.target.closest('[data-edit]');
-  if(b) openEdit(b.getAttribute('data-edit'));
+  const gd=t.closest&&t.closest('[data-gdel]');
+  if(gd){S.guide.splice(+gd.getAttribute('data-gdel'),1);persist();renderSet();renderPanel()}
 });
+$('panel').addEventListener('input',ev=>{
+  const t=ev.target,p=byId(S.sel);if(!p)return;
+  if(t.id==='p-name'){p.name=t.value.trim()||'名前なし';persist();drawMap();return}
+  if(t.id==='p-e'){p.e=+t.value;$('p-eo').textContent=t.value;refreshHead(p);persist();drawMap();return}
+  if(t.id==='p-memo'){p.memo=t.value;persist();return}
+  const row=t.closest('.lrow');
+  if(row&&(t.classList.contains('srange')||t.classList.contains('snum'))){
+    const v=Math.max(0,Math.min(100,parseInt(t.value,10)||0));
+    S.links[lk(p.id,row.getAttribute('data-other'))]=v;
+    row.querySelector('.srange').value=v;
+    if(t.classList.contains('srange'))row.querySelector('.snum').value=v;
+    row.querySelector('.tier').textContent=tierText(v);
+    row.querySelector('.q').setAttribute('data-v',v);
+    persist();drawMap();
+  }
+});
+let eStart=null;
+const startE=()=>{const p=byId(S.sel);if(p&&!eStart)eStart={e:p.e,o:score(p)}};
+$('panel').addEventListener('pointerdown',ev=>{if(ev.target.id==='p-e')startE()});
+$('panel').addEventListener('keydown',ev=>{if(ev.target.id==='p-e')startE()});
+$('panel').addEventListener('change',ev=>{
+  const t=ev.target,p=byId(S.sel);if(!p)return;
+  if(t.id==='p-e'&&eStart){pushHist(p,eStart);eStart=null;persist();$('p-hist').innerHTML=histLines(p);drawMap();return}
+  if(t.classList.contains('p-o')){
+    const b={e:p.e,o:score(p)};p.opp[+t.getAttribute('data-i')]=t.checked?1:0;
+    pushHist(p,b);persist();refreshHead(p);drawMap();$('p-hist').innerHTML=histLines(p);return;
+  }
+  if(t.classList.contains('srange')||t.classList.contains('snum'))renderPanel();
+});
+$('b-add').onclick=addPerson;
+$('b-png').onclick=savePng;
+$('b-set').onclick=()=>{setMsg('');renderSet();$('set').showModal()};
+$('help-x').onclick=()=>$('help').close();
+$('help-set').onclick=()=>{$('help').close();setMsg('');renderSet();$('set').showModal()};
+$('set-x').onclick=()=>$('set').close();
+$('set-add').onclick=()=>{const m=Math.max(...S.guide.map(g=>g.s));S.guide.push({s:Math.min(99,m+10),t:'新しい説明'});commitSet()};
+$('set-reset').onclick=()=>{S.guide=cloneGuide();persist();renderSet();renderPanel()};
+$('set-rows').addEventListener('change',commitSet);
+$('s-export').onclick=()=>{
+  const body=JSON.stringify({app:'positioning-map',exportedAt:new Date().toISOString(),data:snapshot()},null,1);
+  download(new Blob([body],{type:'application/json'}),today()+'_人物マップ_バックアップ.json');
+  setMsg('バックアップを書き出しました。');
+};
+$('s-import').onclick=()=>$('s-file').click();
+$('s-file').onchange=ev=>{
+  const f=ev.target.files[0];if(!f)return;
+  const rd=new FileReader();
+  rd.onload=()=>{
+    try{
+      const d=JSON.parse(String(rd.result));
+      if(!apply(d.data||d)){setMsg('読み込めませんでした。このアプリのバックアップではありません。');return}
+      S.sel=null;persist();renderSet();render();setMsg('読み込みました。現在のデータは置き換わっています。');
+    }catch(e){setMsg('読み込めませんでした。ファイルが壊れている可能性があります。')}
+  };
+  rd.readAsText(f,'utf-8');ev.target.value='';
+};
+$('s-wipe').onclick=ev=>{
+  const b=ev.currentTarget;
+  if(b.getAttribute('data-ok')!=='1'){b.textContent='もう一度押すと全て削除します';b.setAttribute('data-ok','1');return}
+  apply({people:[],links:{},hist:{},guide:cloneGuide()});S.sel=null;persist();
+  b.textContent='全データを削除';b.removeAttribute('data-ok');renderSet();render();setMsg('全データを削除しました。');
+};
+['help','set'].forEach(id=>$(id).addEventListener('click',ev=>{if(ev.target===$(id))$(id).close()}));
+$('t-links').onchange=e=>{S.showLinks=e.target.checked;persist();drawMap()};
+$('t-trail').onchange=e=>{S.showTrail=e.target.checked;persist();drawMap()};
 
 let rt;
-window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { if(view.tab==='map') renderMap(); }, 120); });
-darkMQ.addEventListener && darkMQ.addEventListener('change', renderMap);
+const redraw=()=>{clearTimeout(rt);rt=setTimeout(drawMap,60)};
+if('ResizeObserver' in window)new ResizeObserver(redraw).observe($('map'));else window.addEventListener('resize',redraw);
+try{window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',redraw)}catch(e){}
+try{new MutationObserver(redraw).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']})}catch(e){}
 
-load();
+restore();
+$('t-links').checked=S.showLinks;$('t-trail').checked=S.showTrail;
 render();
-if("serviceWorker" in navigator && location.protocol !== "file:"){
-  navigator.serviceWorker.register("sw.js").catch(function(){});
-}
+try{
+  if('serviceWorker' in navigator && location.protocol!=='file:'){navigator.serviceWorker.register('sw.js').catch(function(){})}
+}catch(e){}
 })();
 </script>
 </body>
