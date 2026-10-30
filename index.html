@@ -52,6 +52,11 @@ h1{font-size:15px;margin:0;font-weight:500;letter-spacing:.14em;color:var(--stro
 .sw input:focus-visible + .tr{outline:2px solid var(--noz);outline-offset:2px}
 .q{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;border:1px solid var(--muted);color:var(--muted);background:none;font-size:11px;font-weight:700;line-height:1;padding:0;flex:none}
 .q:hover{border-color:var(--noz);color:var(--noz-text)}
+.mapwrap{display:flex;gap:8px;align-items:stretch}
+.mapwrap #map{flex:1;min-width:0}
+#wheel{width:38px;flex:none;border-radius:8px;border:1px solid var(--line);cursor:ns-resize;touch-action:none;position:relative;overflow:hidden;--wp:0px;background:linear-gradient(90deg,rgba(0,0,0,.75),rgba(255,255,255,.09) 38%,rgba(0,0,0,0) 58%,rgba(0,0,0,.8)),linear-gradient(180deg,rgba(0,0,0,.8),rgba(0,0,0,0) 22%,rgba(0,0,0,0) 78%,rgba(0,0,0,.8)),repeating-linear-gradient(180deg,#26262a 0,#26262a 7px,#0c0c0d 7px,#0c0c0d 12px);background-position:0 0,0 0,0 var(--wp);user-select:none;-webkit-user-select:none}
+#wheel:focus-visible{outline:2px solid var(--noz);outline-offset:2px}
+#wheel.on{border-color:var(--noz)}
 #map{user-select:none;-webkit-user-select:none}
 #map svg{display:block;width:100%;height:auto}
 .hint{font-size:12px;color:var(--muted);margin:4px 6px 6px}
@@ -198,8 +203,8 @@ dialog::backdrop{background:rgba(0,0,0,.65)}
         <span class="seg hidden" id="q-mode"><button data-qmode="all">すべて</button><button data-qmode="any">どれか</button></span></div>
       <div class="found" id="q-found"></div>
       <div class="asof hidden" id="asof"></div>
-      <div id="map"></div>
-      <p class="hint">点をドラッグすると位置を動かせます。点を押すと詳細が開きます。</p>
+      <div class="mapwrap"><div id="map"></div><div id="wheel" tabindex="0" role="slider" aria-orientation="vertical" aria-label="日付ホイール（上へ回すと過去へ）" title="上へ回すと過去へ、下へ回すと現在へ"></div></div>
+      <p class="hint">点をドラッグすると位置を動かせます。点を押すと詳細が開きます。右のホイールを上へ回すと、1日ずつ過去のマップを見られます。</p>
     </section>
     <aside class="card panel" id="panel" aria-live="polite"></aside>
   </div>
@@ -690,7 +695,7 @@ function renderDate(){
   const el=$('q-date');el.max=today();
   let mn='';S.people.forEach(p=>{(S.hist[p.id]||[]).forEach(x=>{if(!mn||x.d<mn)mn=x.d})});
   if(mn)el.min=mn;
-  el.value=S.asOf;
+  el.value=S.asOf;wheelPaint();
   $('q-now').classList.toggle('hidden',!S.asOf);
   const b=$('asof');b.classList.toggle('hidden',!S.asOf);
   if(S.asOf)b.textContent=fmtD(S.asOf)+' 時点のマップ（閲覧のみ）。その日の位置を表示しています。関係値強度の線、メモ、材料は現在の値です。'+(vis().length?'':'　この日に記録のある人はいません。');
@@ -863,6 +868,36 @@ $('set-reset').onclick=()=>{S.guide=cloneGuide();persist();renderSet();renderPan
 $('set-rows').addEventListener('change',commitSet);
 $('mat-rows').addEventListener('change',commitMats);
 $('q-date').addEventListener('change',e=>setAsOf(e.target.value));
+// 日付ホイール: 上へ回すと1日ずつ過去へ、下へ回すと現在へ
+const wheel=$('wheel'),TICK=12;
+const addDays=(d,n)=>{const t=new Date(d+'T00:00:00');t.setDate(t.getDate()+n);return ymd(t)};
+function earliest(){let mn='';S.people.forEach(p=>{(S.hist[p.id]||[]).forEach(x=>{if(!mn||x.d<mn)mn=x.d})});return mn}
+function wheelOff(){return S.asOf?Math.max(0,daysBetween(S.asOf,today())):0}
+function wheelStep(n){
+  const mn=earliest();if(!mn)return;
+  const max=Math.max(0,daysBetween(mn,today()));
+  const off=Math.max(0,Math.min(max,wheelOff()+n));
+  setAsOf(off===0?'':addDays(today(),-off));
+}
+function wheelPaint(){
+  wheel.style.setProperty('--wp',(wheelOff()*TICK)+'px');
+  wheel.setAttribute('aria-valuetext',S.asOf?fmtD(S.asOf):'現在');
+}
+let wd=null;
+wheel.addEventListener('pointerdown',ev=>{wd={pid:ev.pointerId,y:ev.clientY,acc:0};wheel.classList.add('on');try{wheel.setPointerCapture(ev.pointerId)}catch(e){}});
+wheel.addEventListener('pointermove',ev=>{
+  if(!wd||ev.pointerId!==wd.pid)return;
+  wd.acc+=ev.clientY-wd.y;wd.y=ev.clientY;
+  const n=Math.trunc(wd.acc/TICK);
+  if(n){wd.acc-=n*TICK;wheelStep(n*-1)}
+});
+const wend=ev=>{if(wd&&ev.pointerId===wd.pid){wd=null;wheel.classList.remove('on')}};
+wheel.addEventListener('pointerup',wend);wheel.addEventListener('pointercancel',wend);
+wheel.addEventListener('wheel',ev=>{ev.preventDefault();wheelStep(ev.deltaY<0?1:-1)},{passive:false});
+wheel.addEventListener('keydown',ev=>{
+  const m={ArrowUp:1,ArrowDown:-1,PageUp:7,PageDown:-7}[ev.key];
+  if(m){ev.preventDefault();wheelStep(m)}
+});
 $('q-now').onclick=()=>setAsOf('');
 $('b-help').onclick=()=>$('about').showModal();
 $('about-x').onclick=()=>$('about').close();
