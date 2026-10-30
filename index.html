@@ -54,9 +54,9 @@ h1{font-size:15px;margin:0;font-weight:500;letter-spacing:.14em;color:var(--stro
 .q:hover{border-color:var(--noz);color:var(--noz-text)}
 .mapwrap{display:flex;gap:8px;align-items:stretch}
 .mapwrap #map{flex:1;min-width:0}
-#wheel{width:38px;flex:none;border-radius:8px;border:1px solid var(--line);cursor:ns-resize;touch-action:none;position:relative;overflow:hidden;--wp:0px;background:linear-gradient(90deg,rgba(0,0,0,.75),rgba(255,255,255,.09) 38%,rgba(0,0,0,0) 58%,rgba(0,0,0,.8)),linear-gradient(180deg,rgba(0,0,0,.8),rgba(0,0,0,0) 22%,rgba(0,0,0,0) 78%,rgba(0,0,0,.8)),repeating-linear-gradient(180deg,#26262a 0,#26262a 7px,#0c0c0d 7px,#0c0c0d 12px);background-position:0 0,0 0,0 var(--wp);user-select:none;-webkit-user-select:none}
-#wheel:focus-visible{outline:2px solid var(--noz);outline-offset:2px}
-#wheel.on{border-color:var(--noz)}
+#wheel{width:44px;flex:none;border-radius:6px;border:1px solid var(--line);background:var(--plot) repeating-linear-gradient(180deg,var(--muted) 0,var(--muted) 1px,transparent 1px,transparent 12px);background-position:0 var(--wp,0px);cursor:ns-resize;touch-action:none;user-select:none;-webkit-user-select:none}
+#wheel:focus-visible{outline:1px solid var(--muted);outline-offset:2px}
+.qs{font-size:12px;color:var(--ink)}
 #map{user-select:none;-webkit-user-select:none}
 #map svg{display:block;width:100%;height:auto}
 .hint{font-size:12px;color:var(--muted);margin:4px 6px 6px}
@@ -196,7 +196,7 @@ dialog::backdrop{background:rgba(0,0,0,.65)}
         <input id="q-text" type="search" placeholder="名前で検索（メモ・材料も対象）" autocomplete="off" aria-label="検索">
         <button class="btn hidden" id="q-clear">解除</button>
         <label class="lbl2" for="q-date">日付で見る</label>
-        <input id="q-date" type="date" aria-label="この日付のマップを見る">
+        <input id="q-date" type="date" aria-label="この日付のマップを見る"><span class="qs" id="q-state"></span>
         <button class="btn hidden" id="q-now">現在に戻す</button>
       </div>
       <div class="search" style="padding-top:0"><span class="lbl2">材料で絞る</span><div class="chips" id="q-chips"></div>
@@ -696,6 +696,7 @@ function renderDate(){
   let mn='';S.people.forEach(p=>{(S.hist[p.id]||[]).forEach(x=>{if(!mn||x.d<mn)mn=x.d})});
   if(mn)el.min=mn;
   el.value=S.asOf;wheelPaint();
+  $('q-state').textContent=S.asOf?'':'最新（現在）を表示中';
   $('q-now').classList.toggle('hidden',!S.asOf);
   const b=$('asof');b.classList.toggle('hidden',!S.asOf);
   if(S.asOf)b.textContent=fmtD(S.asOf)+' 時点のマップ（閲覧のみ）。その日の位置を表示しています。関係値強度の線、メモ、材料は現在の値です。'+(vis().length?'':'　この日に記録のある人はいません。');
@@ -884,14 +885,14 @@ function wheelPaint(){
   wheel.setAttribute('aria-valuetext',S.asOf?fmtD(S.asOf):'現在');
 }
 let wd=null;
-wheel.addEventListener('pointerdown',ev=>{wd={pid:ev.pointerId,y:ev.clientY,acc:0};wheel.classList.add('on');try{wheel.setPointerCapture(ev.pointerId)}catch(e){}});
+wheel.addEventListener('pointerdown',ev=>{wd={pid:ev.pointerId,y:ev.clientY,acc:0};try{wheel.setPointerCapture(ev.pointerId)}catch(e){}});
 wheel.addEventListener('pointermove',ev=>{
   if(!wd||ev.pointerId!==wd.pid)return;
   wd.acc+=ev.clientY-wd.y;wd.y=ev.clientY;
   const n=Math.trunc(wd.acc/TICK);
   if(n){wd.acc-=n*TICK;wheelStep(n*-1)}
 });
-const wend=ev=>{if(wd&&ev.pointerId===wd.pid){wd=null;wheel.classList.remove('on')}};
+const wend=ev=>{if(wd&&ev.pointerId===wd.pid){wd=null}};
 wheel.addEventListener('pointerup',wend);wheel.addEventListener('pointercancel',wend);
 wheel.addEventListener('wheel',ev=>{ev.preventDefault();wheelStep(ev.deltaY<0?1:-1)},{passive:false});
 wheel.addEventListener('keydown',ev=>{
