@@ -24,6 +24,8 @@
 html{-webkit-text-size-adjust:100%;background:var(--bg)}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:14px;line-height:1.7;letter-spacing:.02em;
   padding:calc(10px + env(safe-area-inset-top,0px)) max(10px,env(safe-area-inset-right,0px)) calc(32px + env(safe-area-inset-bottom,0px)) max(10px,env(safe-area-inset-left,0px))}
+html,body{overscroll-behavior:none}
+body{touch-action:pan-y pinch-zoom}
 .wrap{max-width:1600px;margin:0 auto}
 button,input,select,textarea{font:inherit;color:inherit;letter-spacing:inherit}
 button{cursor:pointer}
@@ -82,9 +84,10 @@ h1{font-size:15px;margin:0;font-weight:500;letter-spacing:.14em;color:var(--stro
 .xbtn{border:0;background:none;font-size:22px;line-height:1;padding:6px 8px;color:var(--muted)}
 .xbtn:hover{color:var(--strong)}
 .sec{border-top:1px solid var(--line);padding-top:14px;margin-top:16px}
-.ax .axh{display:flex;align-items:center;gap:8px;margin-bottom:2px;font-size:13px;color:var(--ink)}
+.axs{display:grid;grid-template-columns:1fr 1fr;gap:6px 18px;margin-top:-4px}
+.ax .axh{display:flex;align-items:center;gap:6px;margin-bottom:0;font-size:13px;color:var(--ink);white-space:nowrap}
 .ax .axh .big{margin-left:auto}
-.big{width:3.6em;text-align:right;font-size:22px;font-weight:300;color:var(--noz-text);background:none;border:0;border-bottom:1px solid transparent;padding:0;font-variant-numeric:tabular-nums;-moz-appearance:textfield}
+.big{width:2.4em;text-align:right;font-size:18px;font-weight:300;color:var(--noz-text);background:none;border:0;border-bottom:1px solid transparent;padding:0;font-variant-numeric:tabular-nums;-moz-appearance:textfield}
 .big:hover,.big:focus{border-bottom-color:var(--noz);outline:none}
 .big::-webkit-outer-spin-button,.big::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 input[type=range]{-webkit-appearance:none;appearance:none;background:none;width:100%;height:28px;margin:0;touch-action:pan-y}
@@ -183,6 +186,7 @@ dialog::backdrop{background:rgba(0,0,0,.65)}
       <span class="lbl"><label class="sw"><input type="checkbox" id="t-trail" checked><span class="tr"></span>軌跡</label><button class="q" data-help="trail" aria-label="軌跡の説明">?</button></span>
     </div>
     <div class="acts">
+      <button class="btn ic" id="b-home" title="ホーム" aria-label="ホーム"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11l8-7 8 7M6 10v10h12V10M10 20v-6h4v6"/></svg></button>
       <button class="btn main" id="b-add">＋ 人を追加</button>
       <button class="btn ic" id="b-q" title="検索" aria-label="検索" aria-expanded="false"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg></button>
       <button class="btn ic" id="b-png" title="画像を保存" aria-label="画像を保存"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg></button>
@@ -194,7 +198,7 @@ dialog::backdrop{background:rgba(0,0,0,.65)}
 
   <div class="grid">
     <section class="card mapcard">
-      <div class="search">
+      <div class="search hidden" id="drow">
         <label class="lbl2" for="q-date">日付で見る</label>
         <input id="q-date" type="date" aria-label="この日付のマップを見る"><span class="qs" id="q-state"></span>
         <button class="btn hidden" id="q-now">現在に戻す</button>
@@ -405,7 +409,7 @@ function filterNote(){
   S.qmats.forEach(id=>{const m=S.mats.find(x=>x.id===id);if(m)parts.push(m.name)});
   return '絞り込み：'+parts.join(S.qmode==='any'?' または ':' かつ ')+'（'+fm.size+'人）';
 }
-function renderSBox(){const open=S.qopen||!!S.qtext||S.qmats.length>0;$('sbox').classList.toggle('hidden',!open);$('b-q').setAttribute('aria-expanded',open?'true':'false');$('b-q').style.color=open?'var(--strong)':''}
+function renderSBox(){const open=S.qopen||!!S.qtext||S.qmats.length>0;$('drow').classList.toggle('hidden',!(open||S.asOf));$('sbox').classList.toggle('hidden',!open);$('b-q').setAttribute('aria-expanded',open?'true':'false');$('b-q').style.color=open?'var(--strong)':''}
 function renderSearch(){renderSBox();
   S.qmats=S.qmats.filter(id=>S.mats.some(m=>m.id===id));
   $('q-chips').innerHTML=S.mats.map(m=>'<button class="chip" data-chip="'+esc(m.id)+'" aria-pressed="'+(S.qmats.includes(m.id)?'true':'false')+'">'+esc(m.name)+'</button>').join('');
@@ -640,8 +644,8 @@ function renderPanel0(){
   el.innerHTML=
    '<div class="ph"><input id="p-name" value="'+esc(p.name)+'" maxlength="40" placeholder="表示名" aria-label="表示名"><button class="xbtn" data-act="close" aria-label="選択を解除">×</button></div>'+
    '<label class="fl">名前（登録名。マップと画像には出ません）<input id="p-full" value="'+esc(p.full)+'" maxlength="60" placeholder="フルネームなど" autocomplete="off"></label>'+
-   axisBlock('大切にしたい','axisE','p-e','p-en',p.e)+
-   '<div class="sec">'+axisBlock('大切にすべき','axisO','p-o','p-on',p.o)+
+   '<div class="axs">'+axisBlock('大切にしたい','axisE','p-e','p-en',p.e)+axisBlock('大切にすべき','axisO','p-o','p-on',p.o)+'</div>'+
+   '<div class="sec" style="padding-top:8px;margin-top:8px">'+
    '<div class="reasons"><div class="rl">考える材料（当てはまるもの）</div>'+
    (S.mats.length?S.mats.map(m=>'<div class="chk"><label><input type="checkbox" class="p-c" data-id="'+esc(m.id)+'"'+(p.mat[m.id]?' checked':'')+'>'+esc(m.name)+'</label><button class="q" data-help="mat" data-v="'+esc(m.id)+'" aria-label="'+esc(m.name)+'の説明">?</button></div>').join(''):'<div class="hint" style="margin:0">材料がありません。設定で追加できます。</div>')+'</div></div>'+
    '<div class="sec"><h3 class="sh">メモ</h3><textarea id="p-memo" aria-label="メモ">'+esc(p.memo)+'</textarea></div>'+
@@ -805,6 +809,7 @@ function toSvg(ev){
   const svg=mapBox.querySelector('svg'),r=svg.getBoundingClientRect();
   return [(ev.clientX-r.left)*(LAY.W/r.width),(ev.clientY-r.top)*(LAY.H/r.height)];
 }
+mapBox.addEventListener('touchstart',ev=>{if(ev.target.closest&&ev.target.closest('.hit'))ev.preventDefault()},{passive:false});
 mapBox.addEventListener('pointerdown',ev=>{
   const h=ev.target.closest&&ev.target.closest('.hit');if(!h||!LAY)return;
   const id=h.getAttribute('data-id'),p=byId(id);if(!p)return;
@@ -912,6 +917,7 @@ function wheelPaint(){
   wheel.innerHTML='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" aria-hidden="true">'+g+'</svg>';
 }
 let wd=null;
+wheel.addEventListener('touchstart',ev=>ev.preventDefault(),{passive:false});
 wheel.addEventListener('pointerdown',ev=>{wd={pid:ev.pointerId,y:ev.clientY,acc:0};try{wheel.setPointerCapture(ev.pointerId)}catch(e){}});
 wheel.addEventListener('pointermove',ev=>{
   if(!wd||ev.pointerId!==wd.pid)return;
@@ -927,6 +933,7 @@ wheel.addEventListener('keydown',ev=>{
   if(m){ev.preventDefault();wheelStep(m)}
 });
 $('q-now').onclick=()=>setAsOf('');
+$('b-home').onclick=()=>{S.sel=null;S.asOf='';S.qtext='';S.qmats=[];S.qopen=false;$('q-text').value='';render();window.scrollTo(0,0)};
 $('b-q').onclick=()=>{const open=S.qopen||!!S.qtext||S.qmats.length>0;if(open){S.qopen=false;S.qtext='';S.qmats=[];$('q-text').value='';renderSearch();drawMap()}else{S.qopen=true;renderSBox();$('q-text').focus()}};
 $('b-help').onclick=()=>$('about').showModal();
 $('about-x').onclick=()=>$('about').close();
@@ -978,6 +985,7 @@ restore();
 $('t-links').checked=S.showLinks;$('t-trail').checked=S.showTrail;
 render();
 try{
+  try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
   if('serviceWorker' in navigator && location.protocol!=='file:'){navigator.serviceWorker.register('sw.js').catch(function(){})}
 }catch(e){}
 })();
