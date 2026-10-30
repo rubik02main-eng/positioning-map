@@ -182,6 +182,7 @@ dialog::backdrop{background:rgba(0,0,0,.65)}
 </head>
 <body>
 <div class="wrap">
+  <div id="mbar" class="hidden" style="font-size:12px;color:var(--noz);margin-bottom:6px">メンテナンスモード: サンプルを表示中です。あなたのデータは保存されています。</div>
   <div class="top">
     <div class="tg">
       <span class="lbl"><label class="sw"><input type="checkbox" id="t-links" checked><span class="tr"></span>関係値強度</label><button class="q" data-help="links" aria-label="関係値強度の説明">?</button></span>
@@ -293,10 +294,14 @@ dialog::backdrop{background:rgba(0,0,0,.65)}
     <button class="btn" id="s-export">バックアップを書き出す</button>
     <button class="btn" id="s-import">バックアップを読み込む</button>
     <button class="btn" id="s-wipe">全データを削除</button>
-    <button class="btn" id="s-sample">サンプルを入れる（今のデータは置き換わります）</button>
     <input type="file" id="s-file" accept=".json,application/json" class="hidden">
   </div>
   <p id="s-msg" style="font-size:12px;color:var(--muted);margin-top:8px"></p></div></details>
+  <details class="acc"><summary>メンテナンスモード</summary><div class="accb">
+  <p>オンにすると、サンプルのデータに切り替わります。動作の確認用です。あなたのデータは消えず、オフにすると元に戻ります。</p>
+  <label class="sw"><input type="checkbox" id="s-maint"><span class="tr"></span>メンテナンスモード</label>
+  <div class="acts l"><button class="btn hidden" id="s-sample">サンプルを最初の状態に戻す</button></div>
+  </div></details>
   <div class="acts"><button class="btn main" id="set-x">閉じる</button></div>
 </div></dialog>
 
@@ -327,7 +332,8 @@ const DEF_GUIDE=[
 const cloneGuide=()=>DEF_GUIDE.map(g=>Object.assign({},g));
 
 /* ---------- 保存(データの出入りはここだけ。後でSupabaseに差し替える) ---------- */
-const KEY='positioning-map.v3',KEY_OLD='positioning-map.v2';
+const KEY_REAL='positioning-map.v3',KEY_SAMPLE='positioning-map.sample',KEY_OLD='positioning-map.v2';
+let KEY=KEY_REAL;
 const S={people:[],links:{},notes:{},hist:{},mats:cloneMats(),trailGap:1,asOf:'',qtext:'',qmats:[],qmode:'all',guide:cloneGuide(),showLinks:true,showTrail:true,sel:null};
 let warned=false,LAST='';
 function snapshot(){return {v:3,people:S.people,links:S.links,notes:S.notes,hist:S.hist,mats:S.mats,trailGap:S.trailGap,guide:S.guide,showLinks:S.showLinks,showTrail:S.showTrail}}
@@ -639,7 +645,7 @@ function renderPanel0(){
     return;
   }
   if(!live().length){
-    el.innerHTML='<div class="empty">まだ誰も登録されていません。<br>「＋ 人を追加」から始めるか、サンプルで操作を試せます。<div class="acts"><button class="btn main" data-act="new">＋ 人を追加</button><button class="btn" data-act="sample">サンプルを入れる</button></div></div>';
+    el.innerHTML='<div class="empty">まだ誰も登録されていません。<br>「＋ 人を追加」から始めます。<div class="acts"><button class="btn main" data-act="new">＋ 人を追加</button></div></div>';
     return;
   }
   if(!p){el.innerHTML=LAST?'<div class="empty">'+esc(LAST)+'</div>':'';LAST='';return}
@@ -997,6 +1003,23 @@ $('s-wipe').onclick=ev=>{
   disarm();renderSet();render();setMsg('全データを削除しました。');
 };
 ['help','set','arc','about'].forEach(id=>$(id).addEventListener('click',ev=>{if(ev.target===$(id))$(id).close()}));
+const MKEY='positioning-map.maint';
+// メンテナンスモード: 保存先をサンプル用に切り替える。本物のデータには触れない
+function setMaint(on,switching){
+  if(switching)persist();
+  S.maint=!!on;KEY=S.maint?KEY_SAMPLE:KEY_REAL;
+  if(switching){
+    try{localStorage.setItem(MKEY,on?'1':'0')}catch(e){}
+    S.sel=null;S.asOf='';S.qtext='';S.qmats=[];S.qopen=false;$('q-text').value='';
+    let r=null;try{r=localStorage.getItem(KEY)}catch(e){}
+    if(r&&apply(JSON.parse(r))){}
+    else if(S.maint)loadSample();
+    else apply({people:[],links:{},hist:{},guide:cloneGuide()});
+    $('t-links').checked=S.showLinks;$('t-trail').checked=S.showTrail;
+  }
+  $('s-maint').checked=S.maint;$('s-sample').classList.toggle('hidden',!S.maint);$('mbar').classList.toggle('hidden',!S.maint);
+}
+$('s-maint').onchange=e=>{setMaint(e.target.checked,true);renderSet();render();setMsg('')};
 $('t-links').onchange=e=>{S.showLinks=e.target.checked;persist();drawMap()};
 $('t-trail').onchange=e=>{S.showTrail=e.target.checked;persist();drawMap()};
 
@@ -1004,7 +1027,9 @@ let rt;
 const redraw=()=>{clearTimeout(rt);rt=setTimeout(drawMap,60)};
 if('ResizeObserver' in window)new ResizeObserver(redraw).observe(mapBox);else window.addEventListener('resize',redraw);
 
-restore();
+{let m=false;try{m=localStorage.getItem(MKEY)==='1'}catch(e){}
+ setMaint(m,false);
+ if(m){let r=null;try{r=localStorage.getItem(KEY)}catch(e){}if(r)restore();else loadSample()}else restore()}
 $('t-links').checked=S.showLinks;$('t-trail').checked=S.showTrail;
 render();
 try{
