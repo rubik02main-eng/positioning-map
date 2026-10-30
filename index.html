@@ -120,6 +120,24 @@ dialog::backdrop{background:rgba(0,0,0,.65)}
 .gs{width:4em;border:1px solid var(--line);background:var(--plot);border-radius:2px;padding:4px 6px;text-align:right}
 .gt{width:100%;border:1px solid var(--line);background:var(--plot);border-radius:2px;padding:4px 8px}
 .stl{max-height:40vh;overflow:auto}
+.search{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:0 6px 8px}
+.search input[type=search]{flex:1 1 180px;min-width:0;background:var(--plot);border:1px solid var(--line);border-radius:2px;color:var(--ink);padding:7px 10px;font-size:13px;min-height:36px}
+.search input[type=search]:focus{outline:none;border-color:var(--noz)}
+.lbl2{color:var(--muted);font-size:12px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:none;border-radius:999px;padding:3px 12px;font-size:12px;color:var(--ink);min-height:30px}
+.chip:hover{border-color:var(--muted)}
+.chip[aria-pressed="true"]{border-color:var(--noz);color:var(--noz-text);background:var(--noz-soft)}
+.seg{display:inline-flex}
+.seg button{border:1px solid var(--line);background:none;padding:3px 10px;font-size:12px;color:var(--muted);min-height:30px}
+.seg button:first-child{border-radius:2px 0 0 2px}
+.seg button:last-child{border-radius:0 2px 2px 0;border-left:0}
+.seg button[aria-pressed="true"]{color:var(--strong);background:var(--line)}
+.found{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:0 6px 8px}
+.found:empty{display:none}
+.found .fc{font-size:12px;color:var(--noz-text);margin-right:4px}
+.chk{justify-content:space-between}
+.chk label{display:flex;align-items:center;gap:10px;flex:1;min-height:36px;cursor:pointer}
 .hidden{display:none!important}
 </style>
 </head>
@@ -143,6 +161,13 @@ dialog::backdrop{background:rgba(0,0,0,.65)}
         <span class="lbl"><label class="sw"><input type="checkbox" id="t-links" checked><span class="tr"></span>関係値強度</label><button class="q" data-help="links" aria-label="関係値強度の説明">?</button></span>
         <span class="lbl"><label class="sw"><input type="checkbox" id="t-trail" checked><span class="tr"></span>軌跡</label><button class="q" data-help="trail" aria-label="軌跡の説明">?</button></span>
       </div>
+      <div class="search">
+        <input id="q-text" type="search" placeholder="名前・メモ・材料で検索" autocomplete="off" aria-label="検索">
+        <button class="btn hidden" id="q-clear">解除</button>
+      </div>
+      <div class="search" style="padding-top:0"><span class="lbl2">材料で絞る</span><div class="chips" id="q-chips"></div>
+        <span class="seg hidden" id="q-mode"><button data-qmode="all">すべて</button><button data-qmode="any">どれか</button></span></div>
+      <div class="found" id="q-found"></div>
       <div id="map"></div>
       <p class="hint">点をドラッグすると位置を動かせます。点を押すと詳細が開きます。</p>
     </section>
@@ -162,6 +187,10 @@ dialog::backdrop{background:rgba(0,0,0,.65)}
   <p>「?」を押したときに出る説明です。左の数字からその段階が始まります。</p>
   <div class="stl"><table><thead><tr><th>から</th><th>説明</th><th></th></tr></thead><tbody id="set-rows"></tbody></table></div>
   <div class="acts l"><button class="btn" id="set-add">段階を追加</button><button class="btn" id="set-reset">初期値に戻す</button></div>
+  <h3>考える材料</h3>
+  <p>「大切にすべき」で考える材料です。増やしたり、名前と説明を変えたりできます。説明は材料の横の「?」で見られます。</p>
+  <div class="stl"><table><thead><tr><th>材料</th><th>説明</th><th></th></tr></thead><tbody id="mat-rows"></tbody></table></div>
+  <div class="acts l"><button class="btn" id="mat-add">材料を追加</button></div>
   <h3>データ(この端末の中だけに保存されています)</h3>
   <p>バックアップは、人・つながり・軌跡・目安をまとめた1つのファイルです。</p>
   <div class="acts l">
@@ -187,7 +216,12 @@ const fmtJP=d=>d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日 '+p
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const clamp=v=>Math.min(100,Math.max(1,Math.round(v)||1));
 
-const OPP=['イベントに誘える','仕事の可能性がある','人を紹介してくれそう','情報や知識をくれる'];
+const DEF_MATS=[
+ {id:'m1',name:'イベントに誘える',desc:'イベントに来てくれたことがある。誘えば来てくれそう。'},
+ {id:'m2',name:'仕事の可能性がある',desc:'一緒に仕事をしたことがある。仕事を頼んだり頼まれたりできそう。'},
+ {id:'m3',name:'人を紹介してくれそう',desc:'ほかの人を紹介してくれたことがある。頼めば紹介してくれそう。'},
+ {id:'m4',name:'情報や知識をくれる',desc:'役に立つ情報や知識を教えてくれたことがある。'}];
+const cloneMats=()=>DEF_MATS.map(m=>Object.assign({},m));
 const DEF_GUIDE=[
  {s:0,t:'知らない'},{s:1,t:'名前を知っている'},{s:11,t:'Instagramなどでつながっている'},
  {s:21,t:'会話をしたことがある'},{s:31,t:'何度か会話したことがある'},{s:41,t:'個別にやりとりしたことがある'},
@@ -197,17 +231,22 @@ const cloneGuide=()=>DEF_GUIDE.map(g=>Object.assign({},g));
 
 /* ---------- 保存(データの出入りはここだけ。後でSupabaseに差し替える) ---------- */
 const KEY='positioning-map.v3',KEY_OLD='positioning-map.v2';
-const S={people:[],links:{},notes:{},hist:{},guide:cloneGuide(),showLinks:true,showTrail:true,sel:null};
+const S={people:[],links:{},notes:{},hist:{},mats:cloneMats(),qtext:'',qmats:[],qmode:'all',guide:cloneGuide(),showLinks:true,showTrail:true,sel:null};
 let warned=false;
-function snapshot(){return {v:3,people:S.people,links:S.links,notes:S.notes,hist:S.hist,guide:S.guide,showLinks:S.showLinks,showTrail:S.showTrail}}
+function snapshot(){return {v:3,people:S.people,links:S.links,notes:S.notes,hist:S.hist,mats:S.mats,guide:S.guide,showLinks:S.showLinks,showTrail:S.showTrail}}
 function persist(){
   try{localStorage.setItem(KEY,JSON.stringify(snapshot()))}
   catch(e){if(!warned){warned=true;alert('この環境ではデータを保存できません。設定からバックアップを書き出してください。')}}
 }
 function apply(d){
   if(!d||!Array.isArray(d.people))return false;
-  S.people=d.people.map(p=>({id:String(p.id),name:String(p.name||p.full||'名前なし'),full:String(p.full||''),e:clamp(p.e),o:clamp(p.o),
-    opp:[0,1,2,3].map(i=>p.opp&&p.opp[i]?1:0),memo:String(p.memo||'')}));
+  S.mats=Array.isArray(d.mats)&&d.mats.length?d.mats.map(m=>({id:String(m.id),name:String(m.name||'材料'),desc:String(m.desc||'')})):cloneMats();
+  S.people=d.people.map(p=>{
+    const mat={};
+    if(p.mat&&typeof p.mat==='object')Object.keys(p.mat).forEach(id=>{if(p.mat[id])mat[id]=1});
+    else if(Array.isArray(p.opp))p.opp.forEach((v,i)=>{if(v&&DEF_MATS[i])mat[DEF_MATS[i].id]=1});
+    return {id:String(p.id),name:String(p.name||p.full||'名前なし'),full:String(p.full||''),e:clamp(p.e),o:clamp(p.o),mat,memo:String(p.memo||'')};
+  });
   S.links=d.links&&typeof d.links==='object'?d.links:{};
   S.notes=d.notes&&typeof d.notes==='object'?d.notes:{};
   S.hist={};
@@ -238,6 +277,38 @@ function restore(){
 /* ---------- 位置と軌跡 ---------- */
 const byId=id=>S.people.find(p=>p.id===id);
 const dn=p=>p.name||p.full||'名前なし';
+// 検索と材料の絞り込み。条件がなければnull、あれば該当する人のid集合
+function matchSet(){
+  const t=S.qtext.trim().toLowerCase(),ms=S.qmats.filter(id=>S.mats.some(m=>m.id===id));
+  if(!t&&!ms.length)return null;
+  const out=new Set();
+  S.people.forEach(p=>{
+    if(t){
+      const notes=Object.keys(S.notes).filter(k=>k.split('|').includes(p.id)).map(k=>S.notes[k]);
+      const names=S.mats.filter(m=>p.mat[m.id]).map(m=>m.name);
+      if(![p.name,p.full,p.memo].concat(notes,names).join(' ').toLowerCase().includes(t))return;
+    }
+    if(ms.length){const has=id=>!!p.mat[id];if(!(S.qmode==='any'?ms.some(has):ms.every(has)))return}
+    out.add(p.id);
+  });
+  return out;
+}
+function filterNote(){
+  const fm=matchSet();if(!fm)return'';
+  const parts=[],t=S.qtext.trim();
+  if(t)parts.push('「'+t+'」');
+  S.qmats.forEach(id=>{const m=S.mats.find(x=>x.id===id);if(m)parts.push(m.name)});
+  return '絞り込み：'+parts.join(S.qmode==='any'?' または ':' かつ ')+'（'+fm.size+'人）';
+}
+function renderSearch(){
+  S.qmats=S.qmats.filter(id=>S.mats.some(m=>m.id===id));
+  $('q-chips').innerHTML=S.mats.map(m=>'<button class="chip" data-chip="'+esc(m.id)+'" aria-pressed="'+(S.qmats.includes(m.id)?'true':'false')+'">'+esc(m.name)+'</button>').join('');
+  $('q-mode').classList.toggle('hidden',S.qmats.length<2);
+  [...$('q-mode').querySelectorAll('button')].forEach(b=>b.setAttribute('aria-pressed',String(b.getAttribute('data-qmode')===S.qmode)));
+  const fm=matchSet();
+  $('q-clear').classList.toggle('hidden',!fm);
+  $('q-found').innerHTML=fm?('<span class="fc">該当 '+fm.size+'人</span>'+S.people.filter(p=>fm.has(p.id)).map(p=>'<button class="chip" data-act="goto" data-id="'+esc(p.id)+'">'+esc(dn(p))+'</button>').join('')):'';
+}
 const lk=(a,b)=>a<b?a+'|'+b:b+'|'+a;
 const strength=(a,b)=>S.links[lk(a,b)]||0;
 function tierIndex(v){let k=0;S.guide.forEach((g,i)=>{if(g.s<=v)k=i});return k}
@@ -255,10 +326,11 @@ function ensureHist(){
 function helpData(key,v){
   const H={
    axisE:['縦軸：大切にしたい（1〜100）','<p>あなたの<b>気持ち</b>の強さです。損得は考えず、気持ちだけで付けます。</p><table><tr><th>値</th><th>目安</th></tr><tr><td>1</td><td>ほとんど意識しない</td></tr><tr><td>25</td><td>少し気になる</td></tr><tr><td>50</td><td>ふつうに好意がある</td></tr><tr><td>75</td><td>大切にしたい</td></tr><tr><td>100</td><td>何より大切にしたい</td></tr></table><p>マップの上にいるほど大きい値です。点をドラッグするか、詳細のスライダーで変えられます。</p>'],
-   axisO:['横軸：大切にすべき（1〜100）','<p>「この縁を活かすべきか」の度合いです。気持ちとは別に付けます。</p><p>詳細の中に、考える材料として次の4つのチェックがあります。チェックは数値を自動では変えません。</p><table>'+OPP.map(t=>'<tr><td>□</td><td>'+t+'</td></tr>').join('')+'</table><p>マップの右にいるほど大きい値です。</p>'],
+   axisO:['横軸：大切にすべき（1〜100）','<p>「この縁を活かすべきか」の度合いです。気持ちとは別に付けます。</p><p>詳細の中に、考える材料のチェックがあります。チェックは数値を自動では変えません。材料は設定で増やしたり変えたりできます。</p><table>'+S.mats.map(m=>'<tr><td>□</td><td>'+esc(m.name)+'</td></tr>').join('')+'</table><p>マップの右にいるほど大きい値です。</p>'],
    links:['関係値強度','<p>知り合い同士の関係の強さを、あなたの主観で0〜100の数字にします。強いほど線が太く濃くなります。</p><p>0は「線なし」です。スイッチで、線をマップに出すかどうかを選べます。点を選ぶと、その人の線はオレンジになり、数字が付きます。</p>'],
    trail:['軌跡','<p>大切にしたい・大切にすべきの位置が、日ごとに記録されます。同じ日の変更は、その日の1点にまとまります。</p><p>人を選ぶと、その人の点がいつどこへ動いたかを、矢印と移動した年月日で表示します。選んでいないときは、全員の軌跡を薄く表示します。</p>']
   };
+  if(key==='mat'){const m=S.mats.find(x=>x.id===v);return [m?m.name:'材料','<p>'+(m&&m.desc?esc(m.desc):'説明はまだありません。設定で書けます。')+'</p>','mats']}
   if(key==='strength'){
     const cur=v==null?-1:tierIndex(v);
     const rows=S.guide.map((g,i)=>{const e=i+1<S.guide.length?S.guide[i+1].s-1:g.s;
@@ -269,7 +341,7 @@ function helpData(key,v){
 }
 function openHelp(key,v){
   const d=helpData(key,v);
-  $('help-t').textContent=d[0];$('help-b').innerHTML=d[1];$('help-set').classList.toggle('hidden',!d[2]);
+  $('help-t').textContent=d[0];$('help-b').innerHTML=d[1];$('help-set').classList.toggle('hidden',!d[2]);$('help-set').textContent=d[2]==='mats'?'材料を編集する':'目安を変更する';
   $('help').showModal();
 }
 
@@ -295,6 +367,7 @@ function buildSVG(o){
   const off=offsets(S.people.map(p=>({id:p.id,e:p.e,o:p.o})));
   const pos=id=>{const p=byId(id);return[px(p.o)+off[id][0]*s,py(p.e)+off[id][1]*s]};
   const sel=S.sel&&byId(S.sel)?S.sel:null;
+  const fm=matchSet();
   const halo=' stroke="'+pal.plot+'" stroke-width="'+f(k(3))+'" paint-order="stroke" stroke-linejoin="round"';
   const tx=(x,y,t,size,fill,extra)=>'<text x="'+f(x)+'" y="'+f(y)+'" font-size="'+f(k(size))+'" fill="'+fill+'" '+(extra||'')+'>'+t+'</text>';
   let g='<rect width="'+W+'" height="'+H+'" fill="'+pal.bg+'"/>';
@@ -362,15 +435,15 @@ function buildSVG(o){
 
   S.people.forEach(p=>{
     const [x,y]=pos(p.id);
-    const linked=sel&&strength(sel,p.id)>0,dim=sel&&p.id!==sel&&!linked;
+    const hm=fm&&fm.has(p.id),linked=sel&&strength(sel,p.id)>0,dim=fm?(!hm&&p.id!==sel):(sel&&p.id!==sel&&!linked);
     g+='<g opacity="'+(dim?.25:1)+'">';
     if(p.id===sel){
       g+='<circle cx="'+f(x)+'" cy="'+f(y)+'" r="'+f(k(17))+'" fill="none" stroke="'+pal.noz+'" stroke-width="'+f(k(1))+'" opacity=".35"/>';
       g+='<circle cx="'+f(x)+'" cy="'+f(y)+'" r="'+f(k(11))+'" fill="none" stroke="'+pal.noz+'" stroke-width="'+f(k(2))+'"/>';
-    }else if(linked)g+='<circle cx="'+f(x)+'" cy="'+f(y)+'" r="'+f(k(9))+'" fill="none" stroke="'+pal.noz+'" stroke-width="'+f(k(1.3))+'" opacity=".8"/>';
-    g+='<circle cx="'+f(x)+'" cy="'+f(y)+'" r="'+f(k(5.5))+'" fill="'+(p.id===sel?pal.noz:(linked?pal.strong:pal.dot))+'"/>';
+    }else if(linked||hm)g+='<circle cx="'+f(x)+'" cy="'+f(y)+'" r="'+f(k(9))+'" fill="none" stroke="'+pal.noz+'" stroke-width="'+f(k(1.3))+'" opacity=".8"/>';
+    g+='<circle cx="'+f(x)+'" cy="'+f(y)+'" r="'+f(k(5.5))+'" fill="'+(p.id===sel||hm?pal.noz:(linked?pal.strong:pal.dot))+'"/>';
     const left=x>ml+pw*.8;
-    g+=tx(left?x-k(10):x+k(10),y+k(4),esc(dn(p)),11,p.id===sel?pal.strong:(linked?pal.nozText:pal.ink),'text-anchor="'+(left?'end':'start')+'" font-weight="'+(p.id===sel?500:400)+'"'+halo);
+    g+=tx(left?x-k(10):x+k(10),y+k(4),esc(dn(p)),11,p.id===sel?pal.strong:((linked||hm)?pal.nozText:pal.ink),'text-anchor="'+(left?'end':'start')+'" font-weight="'+(p.id===sel?500:400)+'"'+halo);
     g+='</g>';
     if(hits)g+='<circle class="hit" data-id="'+esc(p.id)+'" cx="'+f(x)+'" cy="'+f(y)+'" r="'+f(k(16))+'" fill="transparent" style="cursor:grab;touch-action:none"/>';
   });
@@ -394,7 +467,7 @@ function download(blob,name){
 function savePng(){
   if(!S.people.length){alert('保存する人がいません。');return}
   const now=new Date(),W=1200,H=1100,sp=S.sel&&byId(S.sel);
-  const svg=buildSVG({W,H,s:1.5,hdr:{h:104,title:'人物ポジショニングマップ',stamp:fmtJP(now),note:sp?'選択中：'+dn(sp):''},hits:false});
+  const svg=buildSVG({W,H,s:1.5,hdr:{h:104,title:'人物ポジショニングマップ',stamp:fmtJP(now),note:[sp?'選択中：'+dn(sp):'',filterNote()].filter(Boolean).join('　')},hits:false});
   const img=new Image();
   img.onload=()=>{
     const c=document.createElement('canvas');c.width=W*2;c.height=H*2;
@@ -445,7 +518,7 @@ function renderPanel0(){
    axisBlock('大切にしたい','axisE','p-e','p-en',p.e)+
    '<div class="sec">'+axisBlock('大切にすべき','axisO','p-o','p-on',p.o)+
    '<div class="reasons"><div class="rl">考える材料（当てはまるもの）</div>'+
-   OPP.map((t,i)=>'<label class="chk"><input type="checkbox" class="p-c" data-i="'+i+'"'+(p.opp[i]?' checked':'')+'>'+t+'</label>').join('')+'</div></div>'+
+   (S.mats.length?S.mats.map(m=>'<div class="chk"><label><input type="checkbox" class="p-c" data-id="'+esc(m.id)+'"'+(p.mat[m.id]?' checked':'')+'>'+esc(m.name)+'</label><button class="q" data-help="mat" data-v="'+esc(m.id)+'" aria-label="'+esc(m.name)+'の説明">?</button></div>').join(''):'<div class="hint" style="margin:0">材料がありません。設定で追加できます。</div>')+'</div></div>'+
    '<div class="sec"><h3 class="sh">メモ</h3><textarea id="p-memo" aria-label="メモ">'+esc(p.memo)+'</textarea></div>'+
    '<div class="sec"><h3 class="sh">つながっている人（'+linked.length+'人）<button class="q" data-help="strength" aria-label="関係値強度の説明">?</button></h3>'+
    (linked.length?linked.map(o=>linkRow(p,o.id)).join(''):'<div class="empty" style="padding:2px 0 6px">まだありません。下から追加できます。</div>')+
@@ -463,7 +536,15 @@ function syncPanel(p){
 function refreshHist(){const p=byId(S.sel),h=$('p-hist');if(p&&h)h.innerHTML=histLines(p)}
 
 /* ---------- 設定 ---------- */
+function renderMats(){
+  $('mat-rows').innerHTML=S.mats.map(m=>'<tr data-id="'+esc(m.id)+'"><td><input class="gt mn" value="'+esc(m.name)+'" aria-label="材料名"></td><td><input class="gt md" value="'+esc(m.desc)+'" placeholder="例：イベントに来てくれたことがある" aria-label="説明"></td><td><button class="btn" data-mdel="'+esc(m.id)+'">削除</button></td></tr>').join('');
+}
+function commitMats(){
+  S.mats=[...document.querySelectorAll('#mat-rows tr')].map(tr=>({id:tr.getAttribute('data-id'),name:tr.querySelector('.mn').value.trim()||'材料',desc:tr.querySelector('.md').value.trim()}));
+  persist();renderSearch();renderPanel();
+}
 function renderSet(){
+  renderMats();
   $('set-rows').innerHTML=S.guide.map((g,i)=>'<tr><td><input class="gs" type="number" min="0" max="100" value="'+g.s+'"'+(i===0?' disabled':'')+' aria-label="開始値"></td>'+
     '<td><input class="gt" value="'+esc(g.t)+'" aria-label="説明"></td><td>'+(i?'<button class="btn" data-gdel="'+i+'">削除</button>':'')+'</td></tr>').join('');
 }
@@ -491,10 +572,10 @@ function loadSample(){
 }
 
 /* ---------- イベント ---------- */
-function render(){renderPanel();drawMap()}
+function render(){renderSearch();renderPanel();drawMap()}
 function select(id){S.sel=id;renderPanel();drawMap()}
 function addPerson(){
-  const id='n'+uid(),p={id,name:'新しい人',full:'',e:50,o:50,opp:[0,0,0,0],memo:''};
+  const id='n'+uid(),p={id,name:'新しい人',full:'',e:50,o:50,mat:{},memo:''};
   S.people.push(p);recordPos(p);persist();select(id);
   const n=$('p-name');if(n){n.focus();n.select()}
   if(window.innerWidth<=860)$('panel').scrollIntoView({behavior:'smooth',block:'start'});
@@ -502,7 +583,7 @@ function addPerson(){
 document.addEventListener('click',ev=>{
   const t=ev.target;
   const q=t.closest&&t.closest('[data-help]');
-  if(q){const key=q.getAttribute('data-help'),v=q.getAttribute('data-v');openHelp(key,v==null?null:+v);return}
+  if(q){const key=q.getAttribute('data-help'),v=q.getAttribute('data-v');openHelp(key,key==='mat'?v:(v==null?null:+v));return}
   const a=t.closest&&t.closest('[data-act]');
   if(a){
     const act=a.getAttribute('data-act'),p=S.sel&&byId(S.sel);
@@ -519,6 +600,17 @@ document.addEventListener('click',ev=>{
       delete S.hist[p.id];persist();select(null);
     }
     return;
+  }
+  const ch=t.closest&&t.closest('[data-chip]');
+  if(ch){const id=ch.getAttribute('data-chip');S.qmats=S.qmats.includes(id)?S.qmats.filter(x=>x!==id):S.qmats.concat(id);renderSearch();drawMap();return}
+  const qm=t.closest&&t.closest('[data-qmode]');
+  if(qm){S.qmode=qm.getAttribute('data-qmode');renderSearch();drawMap();return}
+  const md=t.closest&&t.closest('[data-mdel]');
+  if(md){
+    if(md.getAttribute('data-ok')!=='1'){md.textContent='もう一度押すと削除';md.setAttribute('data-ok','1');return}
+    const id=md.getAttribute('data-mdel');
+    S.mats=S.mats.filter(m=>m.id!==id);S.people.forEach(p=>{delete p.mat[id]});
+    persist();renderMats();renderSearch();renderPanel();drawMap();return;
   }
   const gd=t.closest&&t.closest('[data-gdel]');
   if(gd){S.guide.splice(+gd.getAttribute('data-gdel'),1);persist();renderSet();renderPanel()}
@@ -588,7 +680,7 @@ $('panel').addEventListener('input',ev=>{
 $('panel').addEventListener('change',ev=>{
   const t=ev.target,p=byId(S.sel);if(!p)return;
   if(['p-e','p-en','p-o','p-on'].includes(t.id)){syncPanel(p);refreshHist();return}
-  if(t.classList.contains('p-c')){p.opp[+t.getAttribute('data-i')]=t.checked?1:0;persist();return}
+  if(t.classList.contains('p-c')){const id=t.getAttribute('data-id');if(t.checked)p.mat[id]=1;else delete p.mat[id];persist();renderSearch();drawMap();return}
   if(t.classList.contains('srange')||t.classList.contains('snum'))renderPanel();
 });
 $('b-add').onclick=addPerson;
@@ -600,6 +692,10 @@ $('set-x').onclick=()=>$('set').close();
 $('set-add').onclick=()=>{const m=Math.max(...S.guide.map(g=>g.s));S.guide.push({s:Math.min(99,m+10),t:'新しい説明'});commitSet()};
 $('set-reset').onclick=()=>{S.guide=cloneGuide();persist();renderSet();renderPanel()};
 $('set-rows').addEventListener('change',commitSet);
+$('mat-rows').addEventListener('change',commitMats);
+$('mat-add').onclick=()=>{S.mats.push({id:'m'+uid(),name:'新しい材料',desc:''});persist();renderMats();renderSearch();renderPanel()};
+$('q-text').addEventListener('input',e=>{S.qtext=e.target.value;renderSearch();drawMap()});
+$('q-clear').onclick=()=>{S.qtext='';S.qmats=[];$('q-text').value='';renderSearch();drawMap()};
 $('s-export').onclick=()=>{
   const body=JSON.stringify({app:'positioning-map',exportedAt:new Date().toISOString(),data:snapshot()},null,1);
   download(new Blob([body],{type:'application/json'}),today()+'_人物マップ_バックアップ.json');
