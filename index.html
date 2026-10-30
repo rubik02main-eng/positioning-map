@@ -189,6 +189,7 @@ dialog::backdrop{background:rgba(0,0,0,.65)}
       <button class="btn ic" id="b-home" title="ホーム" aria-label="ホーム"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11l8-7 8 7M6 10v10h12V10M10 20v-6h4v6"/></svg></button>
       <button class="btn main" id="b-add">＋ 人を追加</button>
       <button class="btn ic" id="b-q" title="検索" aria-label="検索" aria-expanded="false"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg></button>
+      <button class="btn ic" id="b-save" title="保存" aria-label="保存"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h11l3 3v13H5zM8 4v5h7V4M8 20v-6h8v6"/></svg></button>
       <button class="btn ic" id="b-png" title="画像を保存" aria-label="画像を保存"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg></button>
       <button class="btn ic" id="b-help" title="使い方" aria-label="使い方"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7M12 17v.01"/></svg></button>
       <button class="btn ic hidden" id="b-arc" title="アーカイブ" aria-label="アーカイブ"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18v4H3zM5 9v10h14V9M10 13h4"/></svg><span class="bd" id="arc-n">0</span></button>
@@ -328,8 +329,8 @@ const S={people:[],links:{},notes:{},hist:{},mats:cloneMats(),trailGap:1,asOf:''
 let warned=false,LAST='';
 function snapshot(){return {v:3,people:S.people,links:S.links,notes:S.notes,hist:S.hist,mats:S.mats,trailGap:S.trailGap,guide:S.guide,showLinks:S.showLinks,showTrail:S.showTrail}}
 function persist(){
-  try{localStorage.setItem(KEY,JSON.stringify(snapshot()))}
-  catch(e){if(!warned){warned=true;alert('この環境ではデータを保存できません。設定からバックアップを書き出してください。')}}
+  try{localStorage.setItem(KEY,JSON.stringify(snapshot()));return true}
+  catch(e){if(!warned){warned=true;alert('この環境ではデータを保存できません。設定からバックアップを書き出してください。')}return false}
 }
 function apply(d){
   if(!d||!Array.isArray(d.people))return false;
@@ -933,6 +934,16 @@ wheel.addEventListener('keydown',ev=>{
   if(m){ev.preventDefault();wheelStep(m)}
 });
 $('q-now').onclick=()=>setAsOf('');
+let saveT=0;
+$('b-save').onclick=()=>{
+  const b=$('b-save'),ok=persist(),old=b.getAttribute('data-svg')||b.innerHTML;
+  b.setAttribute('data-svg',old);
+  b.innerHTML=ok?'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>':'<span style="font-size:11px">失敗</span>';
+  b.style.color=ok?'var(--strong)':'';b.title=ok?'保存しました':'保存できませんでした';
+  clearTimeout(saveT);saveT=setTimeout(()=>{b.innerHTML=old;b.style.color='';b.title='保存'},1500);
+};
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')persist()});
+window.addEventListener('pagehide',()=>{persist()});
 $('b-home').onclick=()=>{S.sel=null;S.asOf='';S.qtext='';S.qmats=[];S.qopen=false;$('q-text').value='';render();window.scrollTo(0,0)};
 $('b-q').onclick=()=>{const open=S.qopen||!!S.qtext||S.qmats.length>0;if(open){S.qopen=false;S.qtext='';S.qmats=[];$('q-text').value='';renderSearch();drawMap()}else{S.qopen=true;renderSBox();$('q-text').focus()}};
 $('b-help').onclick=()=>$('about').showModal();
