@@ -931,7 +931,7 @@ wheel.addEventListener('pointermove',ev=>{
   if(!wd||ev.pointerId!==wd.pid)return;
   wd.acc+=ev.clientY-wd.y;wd.y=ev.clientY;
   const n=Math.trunc(wd.acc/TICK);
-  if(n){wd.acc-=n*TICK;wheelStep(n)}
+  if(n){wd.acc-=n*TICK;wheelStep(-n)}
 });
 const wend=ev=>{if(wd&&ev.pointerId===wd.pid){wd=null}};
 wheel.addEventListener('pointerup',wend);wheel.addEventListener('pointercancel',wend);
