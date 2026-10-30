@@ -892,7 +892,7 @@ function wheelPaint(){
   const C={line:'#26262a',dim:'#6f6f76',ink:'#d6d6d9',noz:'#f26522'};
   let g='<rect x="'+tx0+'" y="'+top+'" width="'+(tx1-tx0)+'" height="'+(bot-top)+'" fill="#0c0c0d" stroke="'+C.dim+'" stroke-opacity=".6"/>';
   for(let m=Math.max(0,off-40);m<=Math.min(max,off+40);m++){
-    const r=-(m-off)*SP,u=Math.max(-1,Math.min(1,r/half));
+    const r=(m-off)*SP,u=Math.max(-1,Math.min(1,r/half));
     if(Math.abs(r)>half)continue;
     const y=cy+half*Math.sin(u*Math.PI/2),t=Math.abs(u),wk=m%7===0;
     const len=(wk?22:12)*(1-t*.75),op=(1-t*.7)*(wk?1:.55);
@@ -900,7 +900,7 @@ function wheelPaint(){
     g+='<line x1="'+(cx-len/2).toFixed(1)+'" x2="'+(cx+len/2).toFixed(1)+'" y1="'+y.toFixed(1)+'" y2="'+y.toFixed(1)+'" stroke="'+C.ink+'" stroke-opacity="'+op.toFixed(2)+'" stroke-width="'+(wk?1.6:1)+'"/>';
   }
   for(let m=Math.max(0,off-60);m<=Math.min(max,off+60);m++){
-    const y=cy-(m-off)*6;if(y<top-4||y>bot+4)continue;
+    const y=cy+(m-off)*6;if(y<top-4||y>bot+4)continue;
     g+='<line x1="4" x2="'+(m%7===0?11:8)+'" y1="'+y.toFixed(1)+'" y2="'+y.toFixed(1)+'" stroke="'+C.dim+'"/><line x1="'+(W-4)+'" x2="'+(W-(m%7===0?11:8))+'" y1="'+y.toFixed(1)+'" y2="'+y.toFixed(1)+'" stroke="'+C.dim+'"/>';
   }
   g+='<line x1="'+tx0+'" x2="'+tx1+'" y1="'+cy+'" y2="'+cy+'" stroke="'+C.noz+'" stroke-width="2"/>';
