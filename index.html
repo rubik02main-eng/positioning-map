@@ -29,12 +29,13 @@ button,input,select,textarea{font:inherit;color:inherit;letter-spacing:inherit}
 button{cursor:pointer}
 :focus-visible{outline:2px solid var(--noz);outline-offset:2px}
 .top{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;margin-bottom:14px}
+h1::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--noz);margin-right:10px;vertical-align:1px}
 h1{font-size:15px;margin:0;font-weight:500;letter-spacing:.14em;color:var(--strong)}
 .acts{display:flex;gap:8px;flex-wrap:wrap}
 .btn{border:1px solid var(--line);background:none;border-radius:2px;padding:7px 14px;min-height:38px;color:var(--ink);font-size:13px}
 .btn:hover{border-color:var(--muted);color:var(--strong)}
-.btn.main{background:var(--strong);color:var(--bg);border-color:var(--strong)}
-.btn.main:hover{background:#fff}
+.btn.main{background:var(--noz);color:#1e1f21;border-color:var(--noz);font-weight:500}
+.btn.main:hover{background:#ff7a3d;border-color:#ff7a3d}
 .grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(300px,1fr);gap:16px;align-items:start}
 @media (max-width:860px){.grid{grid-template-columns:minmax(0,1fr)}}
 .card{background:var(--raised);border:1px solid var(--line);border-radius:6px}
@@ -46,11 +47,11 @@ h1{font-size:15px;margin:0;font-weight:500;letter-spacing:.14em;color:var(--stro
 .sw input{position:absolute;opacity:0;width:1px;height:1px}
 .sw .tr{width:32px;height:18px;border-radius:9px;background:var(--line);position:relative;transition:background .15s;flex:none}
 .sw .tr::after{content:"";position:absolute;left:3px;top:3px;width:12px;height:12px;border-radius:50%;background:var(--muted);transition:transform .15s,background .15s}
-.sw input:checked + .tr{background:#3a3a40}
+.sw input:checked + .tr{background:var(--noz)}
 .sw input:checked + .tr::after{transform:translateX(14px);background:var(--strong)}
 .sw input:focus-visible + .tr{outline:2px solid var(--noz);outline-offset:2px}
 .q{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;border:1px solid var(--muted);color:var(--muted);background:none;font-size:11px;font-weight:700;line-height:1;padding:0;flex:none}
-.q:hover{border-color:var(--strong);color:var(--strong)}
+.q:hover{border-color:var(--noz);color:var(--noz-text)}
 #map{user-select:none;-webkit-user-select:none}
 #map svg{display:block;width:100%;height:auto}
 .hint{font-size:12px;color:var(--muted);margin:4px 6px 6px}
@@ -59,33 +60,42 @@ h1{font-size:15px;margin:0;font-weight:500;letter-spacing:.14em;color:var(--stro
 .empty .acts{margin-top:12px}
 .ph{display:flex;align-items:center;gap:8px;margin-bottom:14px}
 .ph input{flex:1;min-width:0;font-size:20px;font-weight:500;color:var(--strong);letter-spacing:.06em;border:0;border-bottom:1px solid transparent;background:none;border-radius:0;padding:2px 0}
-.ph input:hover,.ph input:focus{border-bottom-color:var(--line);outline:none}
+.ph input{border-bottom-color:var(--noz)}
+.ph input:focus{outline:none}
+.fl{display:block;font-size:12px;color:var(--muted);margin:-4px 0 14px}
+.fl input{display:block;width:100%;margin-top:2px;background:none;border:0;border-bottom:1px solid var(--line);color:var(--ink);font-size:14px;padding:3px 0}
+.fl input:focus{outline:none;border-bottom-color:var(--noz)}
+.lmemo{width:100%;margin-top:4px;background:var(--plot);border:1px solid var(--line);border-radius:2px;color:var(--ink);font-size:13px;padding:6px 8px}
+.lmemo:focus{outline:none;border-color:var(--noz)}
+.hist li:first-child time{color:var(--noz-text)}
 .xbtn{border:0;background:none;font-size:22px;line-height:1;padding:6px 8px;color:var(--muted)}
 .xbtn:hover{color:var(--strong)}
 .sec{border-top:1px solid var(--line);padding-top:14px;margin-top:16px}
 .ax .axh{display:flex;align-items:center;gap:8px;margin-bottom:2px;font-size:13px;color:var(--ink)}
 .ax .axh .big{margin-left:auto}
-.big{width:3.6em;text-align:right;font-size:22px;font-weight:300;color:var(--strong);background:none;border:0;border-bottom:1px solid transparent;padding:0;font-variant-numeric:tabular-nums;-moz-appearance:textfield}
-.big:hover,.big:focus{border-bottom-color:var(--line);outline:none}
+.big{width:3.6em;text-align:right;font-size:22px;font-weight:300;color:var(--noz-text);background:none;border:0;border-bottom:1px solid transparent;padding:0;font-variant-numeric:tabular-nums;-moz-appearance:textfield}
+.big:hover,.big:focus{border-bottom-color:var(--noz);outline:none}
 .big::-webkit-outer-spin-button,.big::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 input[type=range]{-webkit-appearance:none;appearance:none;background:none;width:100%;height:28px;margin:0;touch-action:pan-y}
-input[type=range]::-webkit-slider-runnable-track{height:2px;background:var(--line)}
-input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--strong);border:0;margin-top:-8px}
+input[type=range]::-webkit-slider-runnable-track{height:2px;background:linear-gradient(to right,var(--noz) var(--p,0%),var(--line) var(--p,0%))}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--noz);border:0;margin-top:-8px}
 input[type=range]::-moz-range-track{height:2px;background:var(--line)}
-input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--strong);border:0}
+input[type=range]::-moz-range-progress{height:2px;background:var(--noz)}
+input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--noz);border:0}
 .reasons{margin-top:6px}
 .reasons .rl{font-size:12px;color:var(--muted);margin-bottom:2px}
 .chk{display:flex;align-items:center;gap:10px;min-height:36px;font-size:13px}
-.chk input{width:18px;height:18px;accent-color:var(--strong);margin:0}
+.chk input{width:18px;height:18px;accent-color:var(--noz);margin:0}
 .sh{font-size:13px;color:var(--ink);margin:0 0 8px;display:flex;align-items:center;gap:8px;font-weight:500}
+textarea:focus{outline:none;border-color:var(--noz)}
 textarea{width:100%;min-height:64px;border:1px solid var(--line);background:var(--plot);border-radius:2px;padding:8px;font-size:14px;resize:vertical}
 .lrow{padding:10px 0;border-top:1px solid var(--line)}
 .lrow:first-of-type{border-top:0}
 .lrow .l1{display:flex;align-items:center;gap:10px}
 .lrow .nm{border:0;background:none;font-weight:500;padding:2px 0;text-align:left;flex:1;min-width:0;color:var(--strong)}
-.lrow .nm:hover{text-decoration:underline;text-underline-offset:3px}
-.lrow .snum{width:3.2em;text-align:right;font-size:16px;font-weight:300;color:var(--strong);background:none;border:0;border-bottom:1px solid transparent;font-variant-numeric:tabular-nums;-moz-appearance:textfield}
-.lrow .snum:hover,.lrow .snum:focus{border-bottom-color:var(--line);outline:none}
+.lrow .nm:hover{color:var(--noz-text);text-decoration:underline;text-underline-offset:3px}
+.lrow .snum{width:3.2em;text-align:right;font-size:16px;font-weight:300;color:var(--noz-text);background:none;border:0;border-bottom:1px solid transparent;font-variant-numeric:tabular-nums;-moz-appearance:textfield}
+.lrow .snum:hover,.lrow .snum:focus{border-bottom-color:var(--noz);outline:none}
 .lrow .snum::-webkit-outer-spin-button,.lrow .snum::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 .lrow .tier{font-size:12px;color:var(--muted);margin-top:-2px}
 .addrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
@@ -187,18 +197,19 @@ const cloneGuide=()=>DEF_GUIDE.map(g=>Object.assign({},g));
 
 /* ---------- 保存(データの出入りはここだけ。後でSupabaseに差し替える) ---------- */
 const KEY='positioning-map.v3',KEY_OLD='positioning-map.v2';
-const S={people:[],links:{},hist:{},guide:cloneGuide(),showLinks:true,showTrail:true,sel:null};
+const S={people:[],links:{},notes:{},hist:{},guide:cloneGuide(),showLinks:true,showTrail:true,sel:null};
 let warned=false;
-function snapshot(){return {v:3,people:S.people,links:S.links,hist:S.hist,guide:S.guide,showLinks:S.showLinks,showTrail:S.showTrail}}
+function snapshot(){return {v:3,people:S.people,links:S.links,notes:S.notes,hist:S.hist,guide:S.guide,showLinks:S.showLinks,showTrail:S.showTrail}}
 function persist(){
   try{localStorage.setItem(KEY,JSON.stringify(snapshot()))}
   catch(e){if(!warned){warned=true;alert('この環境ではデータを保存できません。設定からバックアップを書き出してください。')}}
 }
 function apply(d){
   if(!d||!Array.isArray(d.people))return false;
-  S.people=d.people.map(p=>({id:String(p.id),name:String(p.name||'名前なし'),e:clamp(p.e),o:clamp(p.o),
+  S.people=d.people.map(p=>({id:String(p.id),name:String(p.name||p.full||'名前なし'),full:String(p.full||''),e:clamp(p.e),o:clamp(p.o),
     opp:[0,1,2,3].map(i=>p.opp&&p.opp[i]?1:0),memo:String(p.memo||'')}));
   S.links=d.links&&typeof d.links==='object'?d.links:{};
+  S.notes=d.notes&&typeof d.notes==='object'?d.notes:{};
   S.hist={};
   if(d.hist&&typeof d.hist==='object')Object.keys(d.hist).forEach(id=>{
     if(Array.isArray(d.hist[id]))S.hist[id]=d.hist[id].map(h=>({d:String(h.d),e:clamp(h.e),o:clamp(h.o)}));
@@ -226,6 +237,7 @@ function restore(){
 
 /* ---------- 位置と軌跡 ---------- */
 const byId=id=>S.people.find(p=>p.id===id);
+const dn=p=>p.name||p.full||'名前なし';
 const lk=(a,b)=>a<b?a+'|'+b:b+'|'+a;
 const strength=(a,b)=>S.links[lk(a,b)]||0;
 function tierIndex(v){let k=0;S.guide.forEach((g,i)=>{if(g.s<=v)k=i});return k}
@@ -302,6 +314,13 @@ function buildSVG(o){
   g+=tx(ml+pw/2,mt+ph+k(32),'大切にすべき →',11,pal.muted,'text-anchor="middle" letter-spacing="'+f(k(1))+'"');
   g+=tx(0,0,'大切にしたい →',11,pal.muted,'text-anchor="middle" letter-spacing="'+f(k(1))+'" transform="translate('+f(k(11))+' '+f(mt+ph/2)+') rotate(-90)"');
 
+  if(sel){
+    const sp=byId(sel),gx=px(sp.o),gy=py(sp.e),dash=' stroke-dasharray="'+f(k(3))+' '+f(k(3))+'"';
+    g+='<line x1="'+f(gx)+'" x2="'+f(gx)+'" y1="'+f(gy)+'" y2="'+f(mt+ph)+'" stroke="'+pal.noz+'" stroke-width="'+f(k(1))+'" opacity=".6"'+dash+'/>';
+    g+='<line x1="'+f(ml)+'" x2="'+f(gx)+'" y1="'+f(gy)+'" y2="'+f(gy)+'" stroke="'+pal.noz+'" stroke-width="'+f(k(1))+'" opacity=".6"'+dash+'/>';
+    g+=tx(gx,mt+ph-k(6),sp.o,11,pal.nozText,'text-anchor="middle" font-weight="500"'+halo);
+    g+=tx(ml+k(6),gy-k(5),sp.e,11,pal.nozText,'font-weight="500"'+halo);
+  }
   if(S.showLinks){
     const mids=[];
     Object.keys(S.links).forEach(key=>{
@@ -341,10 +360,13 @@ function buildSVG(o){
     const [x,y]=pos(p.id);
     const linked=sel&&strength(sel,p.id)>0,dim=sel&&p.id!==sel&&!linked;
     g+='<g opacity="'+(dim?.25:1)+'">';
-    if(p.id===sel)g+='<circle cx="'+f(x)+'" cy="'+f(y)+'" r="'+f(k(11))+'" fill="none" stroke="'+pal.noz+'" stroke-width="'+f(k(2))+'"/>';
+    if(p.id===sel){
+      g+='<circle cx="'+f(x)+'" cy="'+f(y)+'" r="'+f(k(17))+'" fill="none" stroke="'+pal.noz+'" stroke-width="'+f(k(1))+'" opacity=".35"/>';
+      g+='<circle cx="'+f(x)+'" cy="'+f(y)+'" r="'+f(k(11))+'" fill="none" stroke="'+pal.noz+'" stroke-width="'+f(k(2))+'"/>';
+    }else if(linked)g+='<circle cx="'+f(x)+'" cy="'+f(y)+'" r="'+f(k(9))+'" fill="none" stroke="'+pal.noz+'" stroke-width="'+f(k(1.3))+'" opacity=".8"/>';
     g+='<circle cx="'+f(x)+'" cy="'+f(y)+'" r="'+f(k(5.5))+'" fill="'+(p.id===sel?pal.noz:(linked?pal.strong:pal.dot))+'"/>';
     const left=x>ml+pw*.8;
-    g+=tx(left?x-k(10):x+k(10),y+k(4),esc(p.name),11,p.id===sel?pal.strong:pal.ink,'text-anchor="'+(left?'end':'start')+'" font-weight="'+(p.id===sel?500:400)+'"'+halo);
+    g+=tx(left?x-k(10):x+k(10),y+k(4),esc(dn(p)),11,p.id===sel?pal.strong:(linked?pal.nozText:pal.ink),'text-anchor="'+(left?'end':'start')+'" font-weight="'+(p.id===sel?500:400)+'"'+halo);
     g+='</g>';
     if(hits)g+='<circle class="hit" data-id="'+esc(p.id)+'" cx="'+f(x)+'" cy="'+f(y)+'" r="'+f(k(16))+'" fill="transparent" style="cursor:grab;touch-action:none"/>';
   });
@@ -368,7 +390,7 @@ function download(blob,name){
 function savePng(){
   if(!S.people.length){alert('保存する人がいません。');return}
   const now=new Date(),W=1200,H=1100,sp=S.sel&&byId(S.sel);
-  const svg=buildSVG({W,H,s:1.5,hdr:{h:104,title:'人物ポジショニングマップ',stamp:fmtJP(now),note:sp?'選択中：'+sp.name:''},hits:false});
+  const svg=buildSVG({W,H,s:1.5,hdr:{h:104,title:'人物ポジショニングマップ',stamp:fmtJP(now),note:sp?'選択中：'+dn(sp):''},hits:false});
   const img=new Image();
   img.onload=()=>{
     const c=document.createElement('canvas');c.width=W*2;c.height=H*2;
@@ -392,17 +414,19 @@ function histLines(p){
   return out.reverse().join('')+(f0?'<li><time>'+fmtD(f0.d)+'</time><span>記録の開始（大切にしたい '+f0.e+'、大切にすべき '+f0.o+'）</span></li>':'');
 }
 function linkRow(p,oid){
-  const o=byId(oid),v=strength(p.id,oid);
+  const o0=byId(oid),o={name:dn(o0)},v=strength(p.id,oid);
   return '<div class="lrow" data-other="'+esc(oid)+'"><div class="l1"><button class="nm" data-act="goto" data-id="'+esc(oid)+'">'+esc(o.name)+'</button>'+
    '<input class="snum" type="number" min="0" max="100" value="'+v+'" aria-label="'+esc(o.name)+'との関係値強度"><button class="q" data-help="strength" data-v="'+v+'" aria-label="説明">?</button></div>'+
-   '<input class="srange" type="range" min="0" max="100" value="'+v+'" aria-label="'+esc(o.name)+'との関係値強度"><div class="tier">'+esc(tierText(v))+'</div></div>';
+   '<input class="srange" type="range" min="0" max="100" value="'+v+'" aria-label="'+esc(o.name)+'との関係値強度"><div class="tier">'+esc(tierText(v))+'</div>'+
+   '<input class="lmemo" type="text" maxlength="200" placeholder="この関係のメモ" value="'+esc(S.notes[lk(p.id,oid)]||'')+'" aria-label="この関係のメモ"></div>';
 }
 function axisBlock(label,help,idr,idn,val){
   return '<div class="ax"><div class="axh">'+label+'<button class="q" data-help="'+help+'" aria-label="説明">?</button>'+
    '<input class="big" id="'+idn+'" type="number" min="1" max="100" value="'+val+'" aria-label="'+label+'"></div>'+
    '<input id="'+idr+'" type="range" min="1" max="100" value="'+val+'" aria-label="'+label+'"></div>';
 }
-function renderPanel(){
+function renderPanel(){renderPanel0();fillRanges()}
+function renderPanel0(){
   const el=$('panel'),p=S.sel&&byId(S.sel);
   if(!S.people.length){
     el.innerHTML='<div class="empty">まだ誰も登録されていません。<br>「＋ 人を追加」から始めるか、サンプルで操作を試せます。<div class="acts"><button class="btn main" data-act="new">＋ 人を追加</button><button class="btn" data-act="sample">サンプルを入れる</button></div></div>';
@@ -412,7 +436,8 @@ function renderPanel(){
   const linked=S.people.filter(o=>o.id!==p.id&&strength(p.id,o.id)>0).sort((a,b)=>strength(p.id,b.id)-strength(p.id,a.id));
   const free=S.people.filter(o=>o.id!==p.id&&!strength(p.id,o.id));
   el.innerHTML=
-   '<div class="ph"><input id="p-name" value="'+esc(p.name)+'" maxlength="40" aria-label="名前"><button class="xbtn" data-act="close" aria-label="選択を解除">×</button></div>'+
+   '<div class="ph"><input id="p-name" value="'+esc(p.name)+'" maxlength="40" placeholder="表示名" aria-label="表示名"><button class="xbtn" data-act="close" aria-label="選択を解除">×</button></div>'+
+   '<label class="fl">名前（登録名。マップと画像には出ません）<input id="p-full" value="'+esc(p.full)+'" maxlength="60" placeholder="フルネームなど" autocomplete="off"></label>'+
    axisBlock('大切にしたい','axisE','p-e','p-en',p.e)+
    '<div class="sec">'+axisBlock('大切にすべき','axisO','p-o','p-on',p.o)+
    '<div class="reasons"><div class="rl">考える材料（当てはまるもの）</div>'+
@@ -420,13 +445,15 @@ function renderPanel(){
    '<div class="sec"><h3 class="sh">メモ</h3><textarea id="p-memo" aria-label="メモ">'+esc(p.memo)+'</textarea></div>'+
    '<div class="sec"><h3 class="sh">つながっている人（'+linked.length+'人）<button class="q" data-help="strength" aria-label="関係値強度の説明">?</button></h3>'+
    (linked.length?linked.map(o=>linkRow(p,o.id)).join(''):'<div class="empty" style="padding:2px 0 6px">まだありません。下から追加できます。</div>')+
-   (free.length?'<div class="addrow"><select id="p-add" aria-label="つなげる人">'+free.map(o=>'<option value="'+esc(o.id)+'">'+esc(o.name)+'</option>').join('')+'</select><button class="btn" data-act="addlink">つながりを追加</button></div>':'')+
+   (free.length?'<div class="addrow"><select id="p-add" aria-label="つなげる人">'+free.map(o=>'<option value="'+esc(o.id)+'">'+esc(dn(o))+'</option>').join('')+'</select><button class="btn" data-act="addlink">つながりを追加</button></div>':'')+
    '<div class="hint" style="margin:6px 0 0">数字を0にすると、つながりを外します。</div></div>'+
    '<div class="sec"><h3 class="sh">軌跡<button class="q" data-help="trail" aria-label="説明">?</button></h3><ul class="hist" id="p-hist">'+histLines(p)+'</ul></div>'+
    '<div class="sec" style="padding-top:6px"><button class="del" data-act="del">この人を削除</button></div>';
 }
+function fill(el){const mn=+el.min||0,mx=+el.max||100;el.style.setProperty('--p',((+el.value-mn)/(mx-mn)*100)+'%')}
+function fillRanges(){document.querySelectorAll('#panel input[type=range]').forEach(fill)}
 function syncPanel(p){
-  const set=(id,v)=>{const e=$(id);if(e&&document.activeElement!==e)e.value=v};
+  const set=(id,v)=>{const e=$(id);if(!e)return;if(document.activeElement!==e)e.value=v;if(e.type==='range')fill(e)};
   set('p-e',p.e);set('p-en',p.e);set('p-o',p.o);set('p-on',p.o);
 }
 function refreshHist(){const p=byId(S.sel),h=$('p-hist');if(p&&h)h.innerHTML=histLines(p)}
@@ -448,14 +475,14 @@ const setMsg=t=>{$('s-msg').textContent=t};
 /* ---------- サンプル ---------- */
 function loadSample(){
   apply({people:[
-   {id:'at',name:'A.T',e:90,o:75,opp:[1,1,1,0],memo:'一緒に何かやりたい。'},{id:'km',name:'K.M',e:78,o:70,opp:[1,1,0,1],memo:''},
+   {id:'at',name:'A.T',full:'(ここに登録名)',e:90,o:75,opp:[1,1,1,0],memo:'一緒に何かやりたい。'},{id:'km',name:'K.M',e:78,o:70,opp:[1,1,0,1],memo:''},
    {id:'sy',name:'S.Y',e:95,o:8,opp:[0,0,0,0],memo:'損得なしで大切な人。'},{id:'rn',name:'R.N',e:80,o:20,opp:[0,0,0,1],memo:''},
    {id:'mh',name:'M.H',e:35,o:95,opp:[1,1,1,1],memo:'仕事では頼れる。'},{id:'tk',name:'T.K',e:50,o:45,opp:[1,0,1,0],memo:''},
    {id:'ys',name:'Y.S',e:30,o:10,opp:[0,0,0,0],memo:''},{id:'ho',name:'H.O',e:75,o:30,opp:[1,0,0,0],memo:''},{id:'ni',name:'N.I',e:55,o:72,opp:[0,1,1,1],memo:''}],
    links:{'at|km':72,'at|sy':60,'at|mh':40,'km|rn':35,'rn|sy':90,'ho|sy':45,'mh|ni':55,'mh|tk':18,'ni|tk':25,'tk|ys':8,'km|ni':66,'ho|rn':30},
    hist:{at:[{d:'2026-03-02',e:55,o:25},{d:'2026-07-18',e:75,o:50}],km:[{d:'2026-04-10',e:60,o:65}],sy:[{d:'2026-03-02',e:80,o:8}],
          mh:[{d:'2026-05-01',e:75,o:45},{d:'2026-08-20',e:55,o:70}],ni:[{d:'2026-06-01',e:30,o:70}]},
-   guide:S.guide,showLinks:true,showTrail:true});
+   notes:{'at|km':'同じプロジェクトで知り合った。','rn|sy':'昔からの付き合い。'},guide:S.guide,showLinks:true,showTrail:true});
   S.sel='at';persist();$('t-links').checked=true;$('t-trail').checked=true;render();
 }
 
@@ -463,7 +490,7 @@ function loadSample(){
 function render(){renderPanel();drawMap()}
 function select(id){S.sel=id;renderPanel();drawMap()}
 function addPerson(){
-  const id='n'+uid(),p={id,name:'新しい人',e:50,o:50,opp:[0,0,0,0],memo:''};
+  const id='n'+uid(),p={id,name:'新しい人',full:'',e:50,o:50,opp:[0,0,0,0],memo:''};
   S.people.push(p);recordPos(p);persist();select(id);
   const n=$('p-name');if(n){n.focus();n.select()}
   if(window.innerWidth<=860)$('panel').scrollIntoView({behavior:'smooth',block:'start'});
@@ -484,6 +511,7 @@ document.addEventListener('click',ev=>{
       if(a.getAttribute('data-ok')!=='1'){a.textContent='もう一度押すと削除します';a.setAttribute('data-ok','1');return}
       S.people=S.people.filter(x=>x.id!==p.id);
       Object.keys(S.links).forEach(key=>{if(key.split('|').includes(p.id))delete S.links[key]});
+      Object.keys(S.notes).forEach(key=>{if(key.split('|').includes(p.id))delete S.notes[key]});
       delete S.hist[p.id];persist();select(null);
     }
     return;
@@ -528,7 +556,9 @@ mapBox.addEventListener('pointercancel',ev=>endDrag(ev,true));
 
 $('panel').addEventListener('input',ev=>{
   const t=ev.target,p=byId(S.sel);if(!p)return;
-  if(t.id==='p-name'){p.name=t.value.trim()||'名前なし';persist();drawMap();return}
+  if(t.id==='p-name'){p.name=t.value.trim();persist();drawMap();return}
+  if(t.id==='p-full'){p.full=t.value.trim();persist();drawMap();return}
+  if(t.classList.contains('lmemo')){S.notes[lk(p.id,t.closest('.lrow').getAttribute('data-other'))]=t.value;persist();return}
   if(t.id==='p-memo'){p.memo=t.value;persist();return}
   const ax={'p-e':'e','p-en':'e','p-o':'o','p-on':'o'}[t.id];
   if(ax){
@@ -537,13 +567,14 @@ $('panel').addEventListener('input',ev=>{
     const r=$(ax==='e'?'p-e':'p-o'),n=$(ax==='e'?'p-en':'p-on');
     if(t!==r)r.value=p[ax];
     if(t!==n)n.value=p[ax];
+    fill(r);
     persist();drawMap();return;
   }
   const row=t.closest('.lrow');
   if(row&&(t.classList.contains('srange')||t.classList.contains('snum'))){
     const v=Math.max(0,Math.min(100,parseInt(t.value,10)||0));
     S.links[lk(p.id,row.getAttribute('data-other'))]=v;
-    row.querySelector('.srange').value=v;
+    row.querySelector('.srange').value=v;fill(row.querySelector('.srange'));
     if(t.classList.contains('srange'))row.querySelector('.snum').value=v;
     row.querySelector('.tier').textContent=tierText(v);
     row.querySelector('.q').setAttribute('data-v',v);
