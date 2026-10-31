@@ -1084,7 +1084,8 @@ const redraw=()=>{clearTimeout(rt);rt=setTimeout(drawMap,60)};
 if('ResizeObserver' in window)new ResizeObserver(redraw).observe(mapBox);else window.addEventListener('resize',redraw);
 
 /* ---------- 端末間の同期(Supabase。ログインした人の分だけ、1人1行で保存) ---------- */
-const SUPA_URL='',SUPA_KEY='';
+// 公開用の鍵(anon)。データはログインした本人の行にしか読み書きできない(supabase/setup.sql)
+const SUPA_URL='https://tkxfnoemouhwwuopuaqm.supabase.co',SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRreGZub2Vtb3Vod3d1b3B1YXFtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM0NjAxMzYsImV4cCI6MjEwOTAzNjEzNn0.e3BeXqxMi7G6d7R3j-bVG4S7dgL6rHFCFiBZmK3QmBg';
 const MKEY_SYNC='positioning-map.sync';
 const getMeta=()=>{try{return Object.assign({rev:'',dirty:false},JSON.parse(localStorage.getItem(MKEY_SYNC)||'{}'))}catch(e){return {rev:'',dirty:false}}};
 const setMeta=m=>{try{localStorage.setItem(MKEY_SYNC,JSON.stringify(m))}catch(e){}};

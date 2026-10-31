@@ -10,6 +10,9 @@ create table if not exists public.people_map (
 
 alter table public.people_map enable row level security;
 
+-- ログインした人(authenticated)にだけ、読み書きの権限を与える。未ログイン(anon)には与えない。
+grant select, insert, update on public.people_map to authenticated;
+
 create policy "own row select" on public.people_map
   for select using (auth.uid() = user_id);
 create policy "own row insert" on public.people_map
