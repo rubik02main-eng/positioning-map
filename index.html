@@ -297,6 +297,7 @@ dialog::backdrop{background:rgba(0,0,0,.65)}
     <input type="file" id="s-file" accept=".json,application/json" class="hidden">
   </div>
   <p id="s-msg" style="font-size:12px;color:var(--muted);margin-top:8px"></p></div></details>
+  <details class="acc" id="acc-sync"><summary>端末間の同期</summary><div class="accb"><div id="sync-box"></div></div></details>
   <details class="acc"><summary>メンテナンスモード</summary><div class="accb">
   <p>オンにすると、サンプルのデータに切り替わります。動作の確認用です。あなたのデータは消えず、オフにすると元に戻ります。</p>
   <label class="sw"><input type="checkbox" id="s-maint"><span class="tr"></span>メンテナンスモード</label>
@@ -334,11 +335,12 @@ const cloneGuide=()=>DEF_GUIDE.map(g=>Object.assign({},g));
 /* ---------- 保存(データの出入りはここだけ。後でSupabaseに差し替える) ---------- */
 const KEY_REAL='positioning-map.v3',KEY_SAMPLE='positioning-map.sample',KEY_OLD='positioning-map.v2';
 let KEY=KEY_REAL;
+let SB=null,SUSER=null,syncTimer=null,noDirty=false;
 const S={people:[],links:{},notes:{},hist:{},mats:cloneMats(),trailGap:1,asOf:'',qtext:'',qmats:[],qmode:'all',guide:cloneGuide(),showLinks:true,showTrail:true,sel:null};
 let warned=false,LAST='';
 function snapshot(){return {v:3,people:S.people,links:S.links,notes:S.notes,hist:S.hist,mats:S.mats,trailGap:S.trailGap,guide:S.guide,showLinks:S.showLinks,showTrail:S.showTrail}}
 function persist(){
-  try{localStorage.setItem(KEY,JSON.stringify(snapshot()));return true}
+  try{localStorage.setItem(KEY,JSON.stringify(snapshot()));if(KEY===KEY_REAL&&!noDirty)markDirty();return true}
   catch(e){if(!warned){warned=true;alert('この環境ではデータを保存できません。設定からバックアップを書き出してください。')}return false}
 }
 function apply(d){
@@ -446,8 +448,8 @@ function ensureHist(){
 function helpData(key,v){
   const H={
    axisE:['横軸：大切にしたい（1〜100）','<p>あなたの<b>気持ち</b>の強さです。損得は考えず、気持ちだけで付けます。</p><table><tr><th>値</th><th>目安</th></tr><tr><td>1</td><td>ほとんど意識しない</td></tr><tr><td>25</td><td>少し気になる</td></tr><tr><td>50</td><td>ふつうに好意がある</td></tr><tr><td>75</td><td>大切にしたい</td></tr><tr><td>100</td><td>何より大切にしたい</td></tr></table><p>マップの右にいるほど大きい値です。点をドラッグするか、詳細のスライダーで変えられます。</p>'],
-   close:['仲の良さ（1〜10）','<p>あなたとその人が、<b>どれだけ仲が良いか</b>です。マップでは<b>点の大きさと濃さ</b>で表します。大きく濃いほど仲が良い人です。</p><table><tr><th>値</th><th>目安</th></tr><tr><td>0</td><td>未設定（ふつうの大きさ）</td></tr><tr><td>1〜3</td><td>顔見知り</td></tr><tr><td>4〜6</td><td>気軽に話せる</td></tr><tr><td>7〜9</td><td>よく会う・相談できる</td></tr><tr><td>10</td><td>とても親しい</td></tr></table><p>「大切にしたい」は気持ちの強さ、「仲の良さ」は関係の近さです。別々に付けます。</p>'],
-   want:['仲良くしたい（1〜10）','<p>あなたが、その人と<b>どれくらい仲良くなりたいか</b>の希望です。「仲の良さ」と同じ1〜10で付けます。0は未設定です。</p><p>「仲の良さ」と比べて、マップの点にマークが付きます。</p><table><tr><th>マーク</th><th>意味</th></tr><tr><td>赤 ！</td><td>仲良くしたい が 仲の良さ より大きい。希望に届いていないので、もっと関わるべきです。</td></tr><tr><td>緑 ✓</td><td>仲の良さ が 仲良くしたい と同じか、それ以上。希望どおりの関係です。</td></tr></table>'],
+   close:['自分との仲の良さ（1〜10）','<p>あなたとその人が、<b>どれだけ仲が良いか</b>です。マップでは<b>点の大きさと濃さ</b>で表します。大きく濃いほど仲が良い人です。</p><table><tr><th>値</th><th>目安</th></tr><tr><td>0</td><td>未設定（ふつうの大きさ）</td></tr><tr><td>1〜3</td><td>顔見知り</td></tr><tr><td>4〜6</td><td>気軽に話せる</td></tr><tr><td>7〜9</td><td>よく会う・相談できる</td></tr><tr><td>10</td><td>とても親しい</td></tr></table><p>「大切にしたい」は気持ちの強さ、「自分との仲の良さ」は関係の近さです。別々に付けます。</p>'],
+   want:['自分と仲良くしたい（1〜10）','<p>あなたが、その人と<b>どれくらい仲良くなりたいか</b>の希望です。「自分との仲の良さ」と同じ1〜10で付けます。0は未設定です。</p><p>「仲の良さ」と比べて、マップの点にマークが付きます。</p><table><tr><th>マーク</th><th>意味</th></tr><tr><td>赤 ！</td><td>自分と仲良くしたい が 自分との仲の良さ より大きい。希望に届いていないので、もっと関わるべきです。</td></tr><tr><td>緑 ✓</td><td>自分との仲の良さ が 自分と仲良くしたい と同じか、それ以上。希望どおりの関係です。</td></tr></table>'],
    axisO:['縦軸：大切にすべき（1〜100）','<p>「この縁を活かすべきか」の度合いです。気持ちとは別に付けます。</p><p>詳細の中に、考える材料のチェックがあります。チェックは数値を自動では変えません。材料は設定で増やしたり変えたりできます。</p><table>'+S.mats.map(m=>'<tr><td>□</td><td>'+esc(m.name)+'</td></tr>').join('')+'</table><p>マップの上にいるほど大きい値です。</p>'],
    links:['関係値強度','<p>知り合い同士の関係の強さを、あなたの主観で0〜100の数字にします。強いほど線が太く濃くなります。</p><p>0は「線なし」です。スイッチで、線をマップに出すかどうかを選べます。点を選ぶと、その人の線はオレンジになり、数字が付きます。</p>'],
    trail:['軌跡','<p>大切にしたい・大切にすべきの位置が、<b>1日ごとに1点</b>記録されます。同じ日に何度動かしても、その日の最後の位置が残ります。間隔は設定で、1週間・1か月にも変えられます。</p><p>人を選ぶと、その人の点がいつどこへ動いたかを、矢印と移動した年月日で表示します。選んでいないときは、全員の軌跡を薄く表示します。</p><p>点は、詳細の「軌跡」の欄の「×」で1つずつ、「この人の軌跡を消す」でまとめて消せます。消すときは、押したあとにもう一度押して確認します。</p>']
@@ -564,10 +566,10 @@ function buildSVG(o){
     g+='<g opacity="'+(dim?.25:1)+'">';
     if(p.id===sel){
       g+='<circle cx="'+f(x)+'" cy="'+f(y)+'" r="'+f(k(17))+'" fill="none" stroke="'+pal.noz+'" stroke-width="'+f(k(1))+'" opacity=".35"/>';
-      g+='<circle cx="'+f(x)+'" cy="'+f(y)+'" r="'+f(k(Math.max(11,(p.c>0?3+p.c/10*3.5:4.5)+4)))+'" fill="none" stroke="'+pal.noz+'" stroke-width="'+f(k(2))+'"/>';
-    }else if(linked||hm)g+='<circle cx="'+f(x)+'" cy="'+f(y)+'" r="'+f(k(Math.max(9,(p.c>0?3+p.c/10*3.5:4.5)+3)))+'" fill="none" stroke="'+pal.noz+'" stroke-width="'+f(k(1.3))+'" opacity=".8"/>';
+      g+='<circle cx="'+f(x)+'" cy="'+f(y)+'" r="'+f(k(Math.max(11,dotR(p)+4)))+'" fill="none" stroke="'+pal.noz+'" stroke-width="'+f(k(2))+'"/>';
+    }else if(linked||hm)g+='<circle cx="'+f(x)+'" cy="'+f(y)+'" r="'+f(k(Math.max(9,dotR(p)+3)))+'" fill="none" stroke="'+pal.noz+'" stroke-width="'+f(k(1.3))+'" opacity=".8"/>';
     // 仲の良さ: 大きく濃いほど親しい。0は未設定(標準の大きさ)
-    const dr=p.c>0?3+p.c/10*3.5:4.5,dop=p.c>0?.45+p.c/10*.55:1;
+    const dr=dotR(p),lo=Math.max(10,dr+3),dop=p.c>0?.3+p.c/10*.7:1;
     g+='<circle cx="'+f(x)+'" cy="'+f(y)+'" r="'+f(k(dr))+'" fill="'+(p.id===sel||hm?pal.noz:(linked?pal.strong:pal.dot))+'" fill-opacity="'+dop.toFixed(2)+'"/>';
     const cm=cmpOf(p);
     if(cm){
@@ -578,12 +580,12 @@ function buildSVG(o){
         :'<path d="M'+f(mx-k(2))+' '+f(my+k(.1))+'L'+f(mx-k(.5))+' '+f(my+k(1.6))+'L'+f(mx+k(2.2))+' '+f(my-k(1.6))+'" stroke="#fff" stroke-width="'+f(k(1.4))+'" stroke-linecap="round" stroke-linejoin="round" fill="none"/>';
     }
     const left=x>ml+pw*.8;
-    g+=tx(left?x-k(10):x+k(10),y+k(4),esc(dn(p)),11,p.id===sel?pal.strong:((linked||hm)?pal.nozText:pal.ink),'text-anchor="'+(left?'end':'start')+'" font-weight="'+(p.id===sel?500:400)+'"'+halo);
+    g+=tx(left?x-k(lo):x+k(lo),y+k(4),esc(dn(p)),11,p.id===sel?pal.strong:((linked||hm)?pal.nozText:pal.ink),'text-anchor="'+(left?'end':'start')+'" font-weight="'+(p.id===sel?500:400)+'"'+halo);
     g+='</g>';
     if(hits){
       // 表示名の文字の上も当たり判定にする(全角は1em、半角は約0.6em)
       let tw=0;for(const ch of dn(p))tw+=ch.charCodeAt(0)>255?1:.6;
-      const lw=tw*k(11)+k(6),lx=left?x-k(10)-lw+k(3):x+k(10)-k(3);
+      const lw=tw*k(11)+k(6),lx=left?x-k(lo)-lw+k(3):x+k(lo)-k(3);
       g+='<rect class="hit" data-id="'+esc(p.id)+'" x="'+f(lx)+'" y="'+f(y-k(10))+'" width="'+f(lw)+'" height="'+f(k(20))+'" fill="transparent" style="cursor:grab;touch-action:none"/>';
     }
     if(hits)g+='<circle class="hit" data-id="'+esc(p.id)+'" cx="'+f(x)+'" cy="'+f(y)+'" r="'+f(k(16))+'" fill="transparent" style="cursor:grab;touch-action:none"/>';
@@ -648,6 +650,7 @@ function tenBlock(label,help,idr,idn,val){
    '<input class="big" id="'+idn+'" type="number" min="0" max="10" value="'+val+'" aria-label="'+label+'"></div>'+
    '<input id="'+idr+'" type="range" min="0" max="10" step="1" value="'+val+'" aria-label="'+label+'"></div>';
 }
+const dotR=p=>p.c>0?2.5+p.c/10*6.5:4.5;
 // 仲良くしたい(w)と仲の良さ(c)を比べる。wが未設定なら比べない
 const cmpOf=p=>p.w>0?(p.w>p.c?'bad':'good'):'';
 function cmpHtml(p){const r=cmpOf(p);return r==='bad'?'<div class="hint" style="margin:4px 0 0;color:'+PAL.bad+'">！ もっと関わるべき（仲良くしたい '+p.w+' ＞ 仲の良さ '+p.c+'）</div>':r==='good'?'<div class="hint" style="margin:4px 0 0;color:'+PAL.good+'">✓ 希望どおりの関係（仲の良さ '+p.c+' ≧ 仲良くしたい '+p.w+'）</div>':''}
@@ -682,7 +685,7 @@ function renderPanel0(){
    '<div class="nms"><label class="fl">本名<input id="p-full" value="'+esc(p.full)+'" maxlength="60" placeholder="本名" autocomplete="off"></label>'+
    '<label class="fl">表示名<input id="p-name" value="'+esc(p.name)+'" maxlength="40" placeholder="空欄なら本名" aria-label="表示名（空欄なら本名を表示）" autocomplete="off"></label></div>'+
    '<div class="axs">'+axisBlock('大切にしたい','axisE','p-e','p-en',p.e)+axisBlock('大切にすべき','axisO','p-o','p-on',p.o)+'</div>'+
-   '<div class="axs">'+tenBlock('仲の良さ','close','p-k','p-kn',p.c)+tenBlock('仲良くしたい','want','p-w','p-wn',p.w)+'</div><div id="p-cmp">'+cmpHtml(p)+'</div>'+
+   '<div class="axs">'+tenBlock('自分との仲の良さ','close','p-k','p-kn',p.c)+tenBlock('自分と仲良くしたい','want','p-w','p-wn',p.w)+'</div><div id="p-cmp">'+cmpHtml(p)+'</div>'+
    '<div class="sec" style="padding-top:8px;margin-top:8px">'+
    '<div class="reasons"><div class="rl">考える材料（当てはまるもの）</div>'+
    (S.mats.length?S.mats.map(m=>'<div class="chk"><label><input type="checkbox" class="p-c" data-id="'+esc(m.id)+'"'+(p.mat[m.id]?' checked':'')+'>'+esc(m.name)+'</label><button class="q" data-help="mat" data-v="'+esc(m.id)+'" aria-label="'+esc(m.name)+'の説明">?</button></div>').join(''):'<div class="hint" style="margin:0">材料がありません。設定で追加できます。</div>')+'</div></div>'+
@@ -713,6 +716,7 @@ function commitMats(){
 function renderSet(){
   renderMats();
   $('trail-gap').value=String(S.trailGap);
+  renderSync();
   $('set-rows').innerHTML=S.guide.map((g,i)=>'<tr><td><input class="gs" type="number" min="0" max="100" value="'+g.s+'"'+(i===0?' disabled':'')+' aria-label="開始値"></td>'+
     '<td><input class="gt" value="'+esc(g.t)+'" aria-label="説明"></td><td>'+(i?'<button class="btn" data-gdel="'+i+'">削除</button>':'')+'</td></tr>').join('');
 }
@@ -991,7 +995,7 @@ $('b-save').onclick=()=>{
   b.style.color=ok?'var(--strong)':'';b.title=ok?'保存しました':'保存できませんでした';
   clearTimeout(saveT);saveT=setTimeout(()=>{b.innerHTML=old;b.style.color='';b.title='保存'},1500);
 };
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')persist()});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')persist();else syncNow()});
 window.addEventListener('pagehide',()=>{persist()});
 $('b-home').onclick=()=>{S.sel=null;S.asOf='';S.qtext='';S.qmats=[];S.qopen=false;$('q-text').value='';render();window.scrollTo(0,0)};
 $('b-q').onclick=()=>{const open=S.qopen||!!S.qtext||S.qmats.length>0;if(open){S.qopen=false;S.qtext='';S.qmats=[];$('q-text').value='';renderSearch();drawMap()}else{S.qopen=true;renderSBox();$('q-text').focus()}};
@@ -1063,11 +1067,98 @@ let rt;
 const redraw=()=>{clearTimeout(rt);rt=setTimeout(drawMap,60)};
 if('ResizeObserver' in window)new ResizeObserver(redraw).observe(mapBox);else window.addEventListener('resize',redraw);
 
+/* ---------- 端末間の同期(Supabase。ログインした人の分だけ、1人1行で保存) ---------- */
+const SUPA_URL='',SUPA_KEY='';
+const MKEY_SYNC='positioning-map.sync';
+const getMeta=()=>{try{return Object.assign({rev:'',dirty:false},JSON.parse(localStorage.getItem(MKEY_SYNC)||'{}'))}catch(e){return {rev:'',dirty:false}}};
+const setMeta=m=>{try{localStorage.setItem(MKEY_SYNC,JSON.stringify(m))}catch(e){}};
+const SYNC={msg:'',conflict:null,busy:false};
+const hhmm=()=>{const d=new Date();return pad(d.getHours())+':'+pad(d.getMinutes())};
+function markDirty(){
+  const m=getMeta();if(!m.dirty){m.dirty=true;setMeta(m)}
+  if(SB&&SUSER&&!SYNC.conflict){clearTimeout(syncTimer);syncTimer=setTimeout(syncNow,1500)}
+}
+function setSync(t){SYNC.msg=t;renderSync()}
+function renderSync(){
+  const el=$('sync-box');if(!el)return;
+  const msg=SYNC.msg?'<p style="font-size:12px;color:var(--muted)">'+esc(SYNC.msg)+'</p>':'';
+  const note=S.maint?'<p style="font-size:12px;color:var(--noz)">メンテナンスモード中は、同期しません。</p>':'';
+  let h;
+  if(!SUPA_URL)h='<p>同期は準備中です。クラウドの設定がまだ登録されていません。</p>';
+  else if(!SB)h='<p>読み込み中…</p>'+msg;
+  else if(!SUSER)h='<p>ログインすると、別の端末でも同じデータを使えます。データはあなたのログインでだけ読み書きできます。</p><div class="acts l"><button class="btn main" data-sy="login">Googleでログイン</button></div>'+msg;
+  else if(SYNC.conflict)h='<p>ログイン中: '+esc(SUSER.email||'')+'</p>'+msg+'<div class="acts l"><button class="btn" data-sy="keeplocal">この端末の内容を使う（クラウドを上書き）</button><button class="btn" data-sy="keepcloud">クラウドの内容を使う（この端末を置き換え）</button></div>';
+  else h='<p>ログイン中: '+esc(SUSER.email||'')+'</p>'+msg+'<div class="acts l"><button class="btn" data-sy="now">今すぐ同期</button><button class="btn" data-sy="logout">ログアウト</button></div>';
+  el.innerHTML=h+note;
+}
+function applyRemote(row){
+  noDirty=true;
+  try{if(!apply(row.data))throw new Error('クラウドのデータが読めません');S.sel=null;persist()}finally{noDirty=false}
+  setMeta({rev:row.updated_at,dirty:false});
+  $('t-links').checked=S.showLinks;$('t-trail').checked=S.showTrail;
+  render();setSync('クラウドの内容を読み込みました '+hhmm());
+}
+async function push(rev){
+  const payload={data:snapshot(),updated_at:new Date().toISOString()};
+  let r=null;
+  if(rev){
+    const {data,error}=await SB.from('people_map').update(payload).eq('user_id',SUSER.id).eq('updated_at',rev).select('updated_at');
+    if(error)throw error;r=data&&data[0];
+  }else{
+    const {data,error}=await SB.from('people_map').insert(Object.assign({user_id:SUSER.id},payload)).select('updated_at');
+    if(error&&error.code!=='23505')throw error;r=data&&data[0];
+  }
+  if(!r){SYNC.busy=false;return syncNow()}
+  setMeta({rev:r.updated_at,dirty:false});setSync('同期済み '+hhmm());
+}
+async function syncNow(){
+  if(!SB||!SUSER||S.maint||SYNC.busy||SYNC.conflict)return;
+  SYNC.busy=true;setSync('同期中…');
+  try{
+    const {data:row,error}=await SB.from('people_map').select('data,updated_at').maybeSingle();
+    if(error)throw error;
+    const m=getMeta(),unsynced=m.dirty||(!m.rev&&S.people.length>0);
+    if(!row)await push('');
+    else if(m.rev===row.updated_at){if(m.dirty)await push(m.rev);else setSync('同期済み '+hhmm())}
+    else if(!unsynced)applyRemote(row);
+    else{
+      SYNC.conflict=row;setSync('この端末とクラウドで内容が違います。どちらを使うか選んでください。');
+      if(!$('set').open){setMsg('');renderSet();document.querySelectorAll('#set .acc').forEach(x=>{x.open=false});$('acc-sync').open=true;$('set').showModal()}
+    }
+  }catch(e){setSync('同期できません（'+(e.message||e)+'）。通信できるときにやり直します。')}
+  finally{SYNC.busy=false}
+}
+$('sync-box').addEventListener('click',async ev=>{
+  const b=ev.target.closest&&ev.target.closest('[data-sy]');if(!b||!SB)return;
+  const a=b.getAttribute('data-sy');
+  if((a==='keeplocal'||a==='keepcloud')&&b.getAttribute('data-ok')!=='1'){arm(b,'もう一度押すと確定します');return}
+  if(a==='login'){const {error}=await SB.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin+location.pathname}});if(error)setSync('ログインできません（'+error.message+'）')}
+  else if(a==='logout'){await SB.auth.signOut();SYNC.conflict=null;setSync('ログアウトしました。この端末のデータは残っています。')}
+  else if(a==='now')syncNow();
+  else if(a==='keepcloud'){const row=SYNC.conflict;SYNC.conflict=null;applyRemote(row)}
+  else if(a==='keeplocal'){const row=SYNC.conflict;SYNC.conflict=null;SYNC.busy=true;try{await push(row.updated_at)}catch(e){setSync('同期できません（'+(e.message||e)+'）')}finally{SYNC.busy=false}}
+});
+function initSync(){
+  renderSync();
+  if(!SUPA_URL||!SUPA_KEY)return;
+  const boot=()=>{
+    SB=window.supabase.createClient(SUPA_URL,SUPA_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+    SB.auth.onAuthStateChange((ev,sess)=>{SUSER=sess?sess.user:null;renderSync();if(SUSER)setTimeout(syncNow,0)});
+    setInterval(()=>{if(document.visibilityState==='visible')syncNow()},60000);
+  };
+  if(window.supabase){boot();return}
+  const sc=document.createElement('script');
+  sc.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js';
+  sc.onload=boot;sc.onerror=()=>setSync('同期の部品を読み込めません。通信を確認してください。');
+  document.head.appendChild(sc);
+}
+
 {let m=false;try{m=localStorage.getItem(MKEY)==='1'}catch(e){}
  setMaint(m,false);
  if(m){let r=null;try{r=localStorage.getItem(KEY)}catch(e){}if(r)restore();else loadSample()}else restore()}
 $('t-links').checked=S.showLinks;$('t-trail').checked=S.showTrail;
 render();
+initSync();
 try{
   try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
   if('serviceWorker' in navigator && location.protocol!=='file:'){navigator.serviceWorker.register('sw.js').catch(function(){})}

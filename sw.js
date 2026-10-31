@@ -1,5 +1,5 @@
 // オフライン用キャッシュ。ファイルを更新したら VERSION を上げる。
-const VERSION = 'v32';
+const VERSION = 'v34';
 const FILES = ['./', './index.html', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png'];
 
@@ -12,8 +12,10 @@ self.addEventListener('activate', e => {
     .then(() => self.clients.claim()));
 });
 // 通信できるときは常に最新を取り、更新を即反映する。通信できないときだけ保存済みを使う。
+// 別サイト(同期のサーバーなど)への通信は、ここでは扱わない。
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
+  if (new URL(e.request.url).origin !== self.location.origin) return;
   e.respondWith(fetch(e.request).then(res => {
     const copy = res.clone();
     caches.open(VERSION).then(c => c.put(e.request, copy)).catch(() => {});
