@@ -209,7 +209,6 @@ dialog::backdrop{background:rgba(0,0,0,.65)}
       <button class="btn ic" id="b-save" title="保存" aria-label="保存"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h11l3 3v13H5zM8 4v5h7V4M8 20v-6h8v6"/></svg></button>
       <button class="btn ic" id="b-png" title="画像を保存" aria-label="画像を保存"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg></button>
       <button class="btn ic" id="b-help" title="使い方" aria-label="使い方"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7M12 17v.01"/></svg></button>
-      <button class="btn ic hidden" id="b-arc" title="アーカイブ" aria-label="アーカイブ"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18v4H3zM5 9v10h14V9M10 13h4"/></svg><span class="bd" id="arc-n">0</span></button>
       <button class="btn ic" id="b-set" title="設定" aria-label="設定"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
     </div>
   </div>
@@ -278,13 +277,6 @@ dialog::backdrop{background:rgba(0,0,0,.65)}
 <div class="acts"><button class="btn main" id="about-x">閉じる</button></div>
 </div></dialog>
 
-<dialog id="arc"><div class="dlg">
-  <h2>アーカイブ</h2>
-  <p>関係がなくなった人です。マップ・検索・つながりの一覧には出ません。データは残り、いつでも戻せます。</p>
-  <div id="arc-list"></div>
-  <div class="acts"><button class="btn main" id="arc-x">閉じる</button></div>
-</div></dialog>
-
 <dialog id="set"><div class="dlg">
   <h2>設定</h2>
   <p>項目を押すと開きます。</p>
@@ -311,6 +303,10 @@ dialog::backdrop{background:rgba(0,0,0,.65)}
     <input type="file" id="s-file" accept=".json,application/json" class="hidden">
   </div>
   <p id="s-msg" style="font-size:12px;color:var(--muted);margin-top:8px"></p></div></details>
+  <details class="acc" id="acc-arc"><summary>アーカイブ保管庫<span id="arc-n" style="color:var(--muted);margin-left:6px"></span></summary><div class="accb">
+  <p>関係がなくなった人です。マップ・検索・つながりの一覧には出ません。データは残り、いつでも戻せます。</p>
+  <div id="arc-list"></div>
+  </div></details>
   <details class="acc" id="acc-trash"><summary>ゴミ箱<span id="trash-n" style="color:var(--muted);margin-left:6px"></span></summary><div class="accb">
   <p>削除した人です。マップ・検索・つながりの一覧には出ません。<b>自動では消えません。</b>「完全に削除」を押したときだけ、消えます。</p>
   <div id="trash-list"></div>
@@ -750,7 +746,7 @@ function commitMats(){
 function renderSet(){
   renderMats();
   $('trail-gap').value=String(S.trailGap);
-  renderSync();renderTrash();
+  renderSync();renderArc();renderTrash();
   $('set-rows').innerHTML=S.guide.map((g,i)=>'<tr><td><input class="gs" type="number" min="0" max="100" value="'+g.s+'"'+(i===0?' disabled':'')+' aria-label="開始値"></td>'+
     '<td><input class="gt" value="'+esc(g.t)+'" aria-label="説明"></td><td>'+(i?'<button class="btn" data-gdel="'+i+'">削除</button>':'')+'</td></tr>').join('');
 }
@@ -794,8 +790,8 @@ function setAsOf(v){
   renderDate();renderSearch();renderPanel();drawMap();
 }
 function renderArcBtn(){
-  const n=S.people.filter(p=>p.arch&&!p.trash).length;$('b-arc').classList.toggle('hidden',!n);$('arc-n').textContent=n;
-  renderTrash();
+  const n=S.people.filter(p=>p.arch&&!p.trash).length;$('arc-n').textContent=n?'（'+n+'）':'';
+  renderArc();renderTrash();
 }
 function renderTrash(){
   const a=S.people.filter(p=>p.trash).sort((x,y)=>String(y.trashAt).localeCompare(String(x.trashAt)));
@@ -868,7 +864,7 @@ document.addEventListener('click',ev=>{
     if(act==='addlink'&&p){S.links[lk(p.id,$('p-add').value)]=1;persist();renderPanel();drawMap()}
     if(act==='archive'&&p){
       p.arch=true;p.archAt=today();
-      LAST='「'+dn(p)+'」をアーカイブしました。上の「アーカイブ」から戻せます。';
+      LAST='「'+dn(p)+'」をアーカイブしました。設定の「アーカイブ保管庫」から戻せます。';
       persist();select(null);renderSearch();renderArcBtn();
     }
     if(act==='delperson'&&p){
@@ -1074,7 +1070,6 @@ $('b-home').onclick=()=>{S.sel=null;S.asOf='';S.qtext='';S.qmats=[];S.qopen=fals
 $('b-q').onclick=()=>{const open=S.qopen||!!S.qtext||S.qmats.length>0;if(open){S.qopen=false;S.qtext='';S.qmats=[];$('q-text').value='';renderSearch();drawMap()}else{S.qopen=true;renderSBox();$('q-text').focus()}};
 $('b-help').onclick=()=>$('about').showModal();
 $('about-x').onclick=()=>$('about').close();
-$('b-arc').onclick=()=>{renderArc();$('arc').showModal()};
 $('trash-empty').onclick=ev=>{
   const b=ev.currentTarget;
   if(b.getAttribute('data-ok')!=='1'){arm(b,'もう一度押すと、ゴミ箱の中を全て完全に削除します');return}
@@ -1086,7 +1081,6 @@ $('trash-empty').onclick=ev=>{
   ids.forEach(id=>{delete S.hist[id]});
   persist();renderTrash();renderArcBtn();renderSearch();
 };
-$('arc-x').onclick=()=>$('arc').close();
 $('trail-gap').onchange=e=>{S.trailGap=+e.target.value;persist()};
 $('s-trail').onclick=ev=>{
   const b=ev.currentTarget;
@@ -1126,7 +1120,7 @@ $('s-wipe').onclick=ev=>{
   apply({people:[],links:{},hist:{},guide:cloneGuide()});S.sel=null;persist();
   disarm();renderSet();render();setMsg('全データを削除しました。');
 };
-['help','set','arc','about'].forEach(id=>$(id).addEventListener('click',ev=>{if(ev.target===$(id))$(id).close()}));
+['help','set','about'].forEach(id=>$(id).addEventListener('click',ev=>{if(ev.target===$(id))$(id).close()}));
 const MKEY='positioning-map.maint';
 // メンテナンスモード: 保存先をサンプル用に切り替える。本物のデータには触れない
 function setMaint(on,switching){
