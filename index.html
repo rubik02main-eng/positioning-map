@@ -568,6 +568,12 @@ function buildSVG(o){
     const left=x>ml+pw*.8;
     g+=tx(left?x-k(10):x+k(10),y+k(4),esc(dn(p)),11,p.id===sel?pal.strong:((linked||hm)?pal.nozText:pal.ink),'text-anchor="'+(left?'end':'start')+'" font-weight="'+(p.id===sel?500:400)+'"'+halo);
     g+='</g>';
+    if(hits){
+      // 表示名の文字の上も当たり判定にする(全角は1em、半角は約0.6em)
+      let tw=0;for(const ch of dn(p))tw+=ch.charCodeAt(0)>255?1:.6;
+      const lw=tw*k(11)+k(6),lx=left?x-k(10)-lw+k(3):x+k(10)-k(3);
+      g+='<rect class="hit" data-id="'+esc(p.id)+'" x="'+f(lx)+'" y="'+f(y-k(10))+'" width="'+f(lw)+'" height="'+f(k(20))+'" fill="transparent" style="cursor:grab;touch-action:none"/>';
+    }
     if(hits)g+='<circle class="hit" data-id="'+esc(p.id)+'" cx="'+f(x)+'" cy="'+f(y)+'" r="'+f(k(16))+'" fill="transparent" style="cursor:grab;touch-action:none"/>';
   });
   return '<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" font-family="Noto Sans JP, Hiragino Sans, Yu Gothic UI, Meiryo, sans-serif">'+g+'</svg>';
