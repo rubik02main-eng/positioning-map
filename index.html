@@ -348,7 +348,7 @@ function apply(d){
     const mat={};
     if(p.mat&&typeof p.mat==='object')Object.keys(p.mat).forEach(id=>{if(p.mat[id])mat[id]=1});
     else if(Array.isArray(p.opp))p.opp.forEach((v,i)=>{if(v&&DEF_MATS[i])mat[DEF_MATS[i].id]=1});
-    return {id:String(p.id),name:String(p.name||''),full:String(p.full||''),e:clamp(p.e),o:clamp(p.o),c:(v=>Math.max(0,Math.min(10,v>10?Math.round(v/10):v)))(Math.round(+p.c)||0),mat,memo:String(p.memo||''),arch:!!p.arch,archAt:String(p.archAt||'')};
+    return {id:String(p.id),name:String(p.name||''),full:String(p.full||''),e:clamp(p.e),o:clamp(p.o),c:(v=>Math.max(0,Math.min(10,v>10?Math.round(v/10):v)))(Math.round(+p.c)||0),w:Math.max(0,Math.min(10,Math.round(+p.w)||0)),mat,memo:String(p.memo||''),arch:!!p.arch,archAt:String(p.archAt||'')};
   });
   S.links=d.links&&typeof d.links==='object'?d.links:{};
   S.notes=d.notes&&typeof d.notes==='object'?d.notes:{};
@@ -447,6 +447,7 @@ function helpData(key,v){
   const H={
    axisE:['横軸：大切にしたい（1〜100）','<p>あなたの<b>気持ち</b>の強さです。損得は考えず、気持ちだけで付けます。</p><table><tr><th>値</th><th>目安</th></tr><tr><td>1</td><td>ほとんど意識しない</td></tr><tr><td>25</td><td>少し気になる</td></tr><tr><td>50</td><td>ふつうに好意がある</td></tr><tr><td>75</td><td>大切にしたい</td></tr><tr><td>100</td><td>何より大切にしたい</td></tr></table><p>マップの右にいるほど大きい値です。点をドラッグするか、詳細のスライダーで変えられます。</p>'],
    close:['仲の良さ（1〜10）','<p>あなたとその人が、<b>どれだけ仲が良いか</b>です。マップでは<b>点の大きさと濃さ</b>で表します。大きく濃いほど仲が良い人です。</p><table><tr><th>値</th><th>目安</th></tr><tr><td>0</td><td>未設定（ふつうの大きさ）</td></tr><tr><td>1〜3</td><td>顔見知り</td></tr><tr><td>4〜6</td><td>気軽に話せる</td></tr><tr><td>7〜9</td><td>よく会う・相談できる</td></tr><tr><td>10</td><td>とても親しい</td></tr></table><p>「大切にしたい」は気持ちの強さ、「仲の良さ」は関係の近さです。別々に付けます。</p>'],
+   want:['仲良くしたい（1〜10）','<p>あなたが、その人と<b>どれくらい仲良くなりたいか</b>の希望です。「仲の良さ」と同じ1〜10で付けます。0は未設定です。</p><p>「仲の良さ」と比べて、マップの点にマークが付きます。</p><table><tr><th>マーク</th><th>意味</th></tr><tr><td>赤 ！</td><td>仲良くしたい が 仲の良さ より大きい。希望に届いていないので、もっと関わるべきです。</td></tr><tr><td>緑 ✓</td><td>仲の良さ が 仲良くしたい と同じか、それ以上。希望どおりの関係です。</td></tr></table>'],
    axisO:['縦軸：大切にすべき（1〜100）','<p>「この縁を活かすべきか」の度合いです。気持ちとは別に付けます。</p><p>詳細の中に、考える材料のチェックがあります。チェックは数値を自動では変えません。材料は設定で増やしたり変えたりできます。</p><table>'+S.mats.map(m=>'<tr><td>□</td><td>'+esc(m.name)+'</td></tr>').join('')+'</table><p>マップの上にいるほど大きい値です。</p>'],
    links:['関係値強度','<p>知り合い同士の関係の強さを、あなたの主観で0〜100の数字にします。強いほど線が太く濃くなります。</p><p>0は「線なし」です。スイッチで、線をマップに出すかどうかを選べます。点を選ぶと、その人の線はオレンジになり、数字が付きます。</p>'],
    trail:['軌跡','<p>大切にしたい・大切にすべきの位置が、<b>1日ごとに1点</b>記録されます。同じ日に何度動かしても、その日の最後の位置が残ります。間隔は設定で、1週間・1か月にも変えられます。</p><p>人を選ぶと、その人の点がいつどこへ動いたかを、矢印と移動した年月日で表示します。選んでいないときは、全員の軌跡を薄く表示します。</p><p>点は、詳細の「軌跡」の欄の「×」で1つずつ、「この人の軌跡を消す」でまとめて消せます。消すときは、押したあとにもう一度押して確認します。</p>']
@@ -467,7 +468,7 @@ function openHelp(key,v){
 }
 
 /* ---------- マップ(画面と画像で同じ描画を使う) ---------- */
-const PAL={bg:'#0b0b0c',raised:'#121214',plot:'#0e0e10',line:'#26262a',grid:'#1a1a1d',strong:'#f2f2f3',ink:'#d6d6d9',muted:'#8a8a91',dot:'#6f6f76',noz:'#f26522',nozText:'#ff8a4c'};
+const PAL={bg:'#0b0b0c',raised:'#121214',plot:'#0e0e10',line:'#26262a',grid:'#1a1a1d',strong:'#f2f2f3',ink:'#d6d6d9',muted:'#8a8a91',dot:'#6f6f76',noz:'#f26522',nozText:'#ff8a4c',good:'#34c17b',bad:'#ef4f4f'};
 const X0=-5,X1=105,Y0=-5,Y1=105;
 let LAY=null;
 function offsets(items){
@@ -568,6 +569,14 @@ function buildSVG(o){
     // 仲の良さ: 大きく濃いほど親しい。0は未設定(標準の大きさ)
     const dr=p.c>0?3+p.c/10*3.5:4.5,dop=p.c>0?.45+p.c/10*.55:1;
     g+='<circle cx="'+f(x)+'" cy="'+f(y)+'" r="'+f(k(dr))+'" fill="'+(p.id===sel||hm?pal.noz:(linked?pal.strong:pal.dot))+'" fill-opacity="'+dop.toFixed(2)+'"/>';
+    const cm=cmpOf(p);
+    if(cm){
+      const mx=x-k(7),my=y-k(7),mc=cm==='bad'?pal.bad:pal.good;
+      g+='<circle cx="'+f(mx)+'" cy="'+f(my)+'" r="'+f(k(4.2))+'" fill="'+mc+'"/>';
+      g+=cm==='bad'
+        ?'<path d="M'+f(mx)+' '+f(my-k(2.2))+'V'+f(my+k(.4))+'M'+f(mx)+' '+f(my+k(1.9))+'v'+f(k(.1))+'" stroke="#fff" stroke-width="'+f(k(1.4))+'" stroke-linecap="round" fill="none"/>'
+        :'<path d="M'+f(mx-k(2))+' '+f(my+k(.1))+'L'+f(mx-k(.5))+' '+f(my+k(1.6))+'L'+f(mx+k(2.2))+' '+f(my-k(1.6))+'" stroke="#fff" stroke-width="'+f(k(1.4))+'" stroke-linecap="round" stroke-linejoin="round" fill="none"/>';
+    }
     const left=x>ml+pw*.8;
     g+=tx(left?x-k(10):x+k(10),y+k(4),esc(dn(p)),11,p.id===sel?pal.strong:((linked||hm)?pal.nozText:pal.ink),'text-anchor="'+(left?'end':'start')+'" font-weight="'+(p.id===sel?500:400)+'"'+halo);
     g+='</g>';
@@ -634,6 +643,14 @@ function linkRow(p,oid){
    '<input class="srange" type="range" min="0" max="100" value="'+v+'" aria-label="'+esc(o.name)+'との関係値強度"><div class="tier">'+esc(tierText(v))+'</div>'+
    '<input class="lmemo" type="text" maxlength="200" placeholder="この関係のメモ" value="'+esc(S.notes[lk(p.id,oid)]||'')+'" aria-label="この関係のメモ"></div>';
 }
+function tenBlock(label,help,idr,idn,val){
+  return '<div class="ax"><div class="axh">'+label+'<button class="q" data-help="'+help+'" aria-label="説明">?</button>'+
+   '<input class="big" id="'+idn+'" type="number" min="0" max="10" value="'+val+'" aria-label="'+label+'"></div>'+
+   '<input id="'+idr+'" type="range" min="0" max="10" step="1" value="'+val+'" aria-label="'+label+'"></div>';
+}
+// 仲良くしたい(w)と仲の良さ(c)を比べる。wが未設定なら比べない
+const cmpOf=p=>p.w>0?(p.w>p.c?'bad':'good'):'';
+function cmpHtml(p){const r=cmpOf(p);return r==='bad'?'<div class="hint" style="margin:4px 0 0;color:'+PAL.bad+'">！ もっと関わるべき（仲良くしたい '+p.w+' ＞ 仲の良さ '+p.c+'）</div>':r==='good'?'<div class="hint" style="margin:4px 0 0;color:'+PAL.good+'">✓ 希望どおりの関係（仲の良さ '+p.c+' ≧ 仲良くしたい '+p.w+'）</div>':''}
 function axisBlock(label,help,idr,idn,val){
   return '<div class="ax"><div class="axh">'+label+'<button class="q" data-help="'+help+'" aria-label="説明">?</button>'+
    '<input class="big" id="'+idn+'" type="number" min="1" max="100" value="'+val+'" aria-label="'+label+'"></div>'+
@@ -665,7 +682,7 @@ function renderPanel0(){
    '<div class="nms"><label class="fl">本名<input id="p-full" value="'+esc(p.full)+'" maxlength="60" placeholder="本名" autocomplete="off"></label>'+
    '<label class="fl">表示名<input id="p-name" value="'+esc(p.name)+'" maxlength="40" placeholder="空欄なら本名" aria-label="表示名（空欄なら本名を表示）" autocomplete="off"></label></div>'+
    '<div class="axs">'+axisBlock('大切にしたい','axisE','p-e','p-en',p.e)+axisBlock('大切にすべき','axisO','p-o','p-on',p.o)+'</div>'+
-   '<div class="axs" style="grid-template-columns:1fr"><div class="ax"><div class="axh">仲の良さ<button class="q" data-help="close" aria-label="説明">?</button><input class="big" id="p-kn" type="number" min="0" max="10" value="'+p.c+'" aria-label="仲の良さ"></div><input id="p-k" type="range" min="0" max="10" step="1" value="'+p.c+'" aria-label="仲の良さ"></div></div>'+
+   '<div class="axs">'+tenBlock('仲の良さ','close','p-k','p-kn',p.c)+tenBlock('仲良くしたい','want','p-w','p-wn',p.w)+'</div><div id="p-cmp">'+cmpHtml(p)+'</div>'+
    '<div class="sec" style="padding-top:8px;margin-top:8px">'+
    '<div class="reasons"><div class="rl">考える材料（当てはまるもの）</div>'+
    (S.mats.length?S.mats.map(m=>'<div class="chk"><label><input type="checkbox" class="p-c" data-id="'+esc(m.id)+'"'+(p.mat[m.id]?' checked':'')+'>'+esc(m.name)+'</label><button class="q" data-help="mat" data-v="'+esc(m.id)+'" aria-label="'+esc(m.name)+'の説明">?</button></div>').join(''):'<div class="hint" style="margin:0">材料がありません。設定で追加できます。</div>')+'</div></div>'+
@@ -681,7 +698,7 @@ function fill(el){const mn=+el.min||0,mx=+el.max||100;el.style.setProperty('--p'
 function fillRanges(){document.querySelectorAll('#panel input[type=range]').forEach(fill)}
 function syncPanel(p){
   const set=(id,v)=>{const e=$(id);if(!e)return;if(document.activeElement!==e)e.value=v;if(e.type==='range')fill(e)};
-  set('p-k',p.c);set('p-kn',p.c);set('p-e',p.e);set('p-en',p.e);set('p-o',p.o);set('p-on',p.o);
+  set('p-k',p.c);set('p-kn',p.c);set('p-w',p.w);set('p-wn',p.w);{const c=$('p-cmp');if(c)c.innerHTML=cmpHtml(p)}set('p-e',p.e);set('p-en',p.e);set('p-o',p.o);set('p-on',p.o);
 }
 function refreshHist(){const p=byId(S.sel),h=$('p-hist');if(p&&h)h.innerHTML=histLines(p)}
 
@@ -711,10 +728,10 @@ const setMsg=t=>{$('s-msg').textContent=t};
 /* ---------- サンプル ---------- */
 function loadSample(){
   apply({people:[
-   {id:'at',name:'',full:'A.T',c:7,e:90,o:75,opp:[1,1,1,0],memo:'一緒に何かやりたい。'},{id:'km',name:'',full:'K.M',c:6,e:78,o:70,opp:[1,1,0,1],memo:''},
-   {id:'sy',name:'',full:'S.Y',c:10,e:95,o:8,opp:[0,0,0,0],memo:'損得なしで大切な人。'},{id:'rn',name:'',full:'R.N',c:8,e:80,o:20,opp:[0,0,0,1],memo:''},
-   {id:'mh',name:'',full:'M.H',c:3,e:35,o:95,opp:[1,1,1,1],memo:'仕事では頼れる。'},{id:'tk',name:'',full:'T.K',c:2,e:50,o:45,opp:[1,0,1,0],memo:''},
-   {id:'ys',name:'',full:'Y.S',c:0,e:30,o:10,opp:[0,0,0,0],memo:''},{id:'ho',name:'',full:'H.O',c:6,e:75,o:30,opp:[1,0,0,0],memo:''},{id:'ni',name:'',full:'N.I',c:4,e:55,o:72,opp:[0,1,1,1],memo:''}],
+   {id:'at',name:'',full:'A.T',c:7,w:3,e:90,o:75,opp:[1,1,1,0],memo:'一緒に何かやりたい。'},{id:'km',name:'',full:'K.M',c:6,w:8,e:78,o:70,opp:[1,1,0,1],memo:''},
+   {id:'sy',name:'',full:'S.Y',c:10,w:6,e:95,o:8,opp:[0,0,0,0],memo:'損得なしで大切な人。'},{id:'rn',name:'',full:'R.N',c:8,w:9,e:80,o:20,opp:[0,0,0,1],memo:''},
+   {id:'mh',name:'',full:'M.H',c:3,w:8,e:35,o:95,opp:[1,1,1,1],memo:'仕事では頼れる。'},{id:'tk',name:'',full:'T.K',c:2,w:2,e:50,o:45,opp:[1,0,1,0],memo:''},
+   {id:'ys',name:'',full:'Y.S',c:0,w:0,e:30,o:10,opp:[0,0,0,0],memo:''},{id:'ho',name:'',full:'H.O',c:6,w:4,e:75,o:30,opp:[1,0,0,0],memo:''},{id:'ni',name:'',full:'N.I',c:4,w:7,e:55,o:72,opp:[0,1,1,1],memo:''}],
    links:{'at|km':72,'at|sy':60,'at|mh':40,'km|rn':35,'rn|sy':90,'ho|sy':45,'mh|ni':55,'mh|tk':18,'ni|tk':25,'tk|ys':8,'km|ni':66,'ho|rn':30},
    hist:{at:[{d:'2026-03-02',e:55,o:25},{d:'2026-07-18',e:75,o:50}],km:[{d:'2026-04-10',e:60,o:65}],sy:[{d:'2026-03-02',e:80,o:8}],
          mh:[{d:'2026-05-01',e:75,o:45},{d:'2026-08-20',e:55,o:70}],ni:[{d:'2026-06-01',e:30,o:70}]},
@@ -746,7 +763,7 @@ function renderArc(){
 function select(id){S.sel=id;renderPanel();drawMap()}
 function addPerson(){
   if(S.asOf){S.asOf='';renderDate()}
-  const id='n'+uid(),p={id,name:'',full:'新しい人',e:50,o:50,c:0,mat:{},memo:''};
+  const id='n'+uid(),p={id,name:'',full:'新しい人',e:50,o:50,c:0,w:0,mat:{},memo:''};
   S.people.push(p);recordPos(p);persist();select(id);
   const n=$('p-full');if(n){n.focus();n.select()}
   if($('panel').scrollIntoView)$('panel').scrollIntoView({behavior:'smooth',block:'start'});
@@ -867,10 +884,12 @@ $('panel').addEventListener('input',ev=>{
   if(t.id==='p-full'){p.full=t.value.trim();const tt=$('p-title');if(tt)tt.textContent=dn(p);persist();drawMap();return}
   if(t.classList.contains('lmemo')){S.notes[lk(p.id,t.closest('.lrow').getAttribute('data-other'))]=t.value;persist();return}
   if(t.id==='p-memo'){p.memo=t.value;persist();return}
-  if(t.id==='p-k'||t.id==='p-kn'){
+  const tk={'p-k':'c','p-kn':'c','p-w':'w','p-wn':'w'}[t.id];
+  if(tk){
     if(t.value==='')return;
-    p.c=Math.max(0,Math.min(10,parseInt(t.value,10)||0));
-    const r=$('p-k'),n=$('p-kn');if(t!==r)r.value=p.c;if(t!==n)n.value=p.c;fill(r);
+    p[tk]=Math.max(0,Math.min(10,parseInt(t.value,10)||0));
+    const r=$(tk==='c'?'p-k':'p-w'),n=$(tk==='c'?'p-kn':'p-wn');if(t!==r)r.value=p[tk];if(t!==n)n.value=p[tk];fill(r);
+    $('p-cmp').innerHTML=cmpHtml(p);
     persist();drawMap();return;
   }
   const ax={'p-e':'e','p-en':'e','p-o':'o','p-on':'o'}[t.id];
@@ -896,7 +915,7 @@ $('panel').addEventListener('input',ev=>{
 });
 $('panel').addEventListener('change',ev=>{
   const t=ev.target,p=byId(S.sel);if(!p)return;
-  if(t.id==='p-k'||t.id==='p-kn'){syncPanel(p);return}
+  if(['p-k','p-kn','p-w','p-wn'].includes(t.id)){syncPanel(p);return}
   if(['p-e','p-en','p-o','p-on'].includes(t.id)){syncPanel(p);refreshHist();return}
   if(t.classList.contains('p-c')){const id=t.getAttribute('data-id');if(t.checked)p.mat[id]=1;else delete p.mat[id];persist();renderSearch();drawMap();return}
   if(t.classList.contains('srange')||t.classList.contains('snum'))renderPanel();
