@@ -68,7 +68,12 @@ h1{font-size:15px;margin:0;font-weight:500;letter-spacing:.14em;color:var(--stro
 #map{user-select:none;-webkit-user-select:none}
 #map svg{display:block;width:100%;height:auto}
 .hint{font-size:12px;color:var(--muted);margin:4px 6px 6px}
-.panel{padding:16px}
+.panel{padding:16px;--raised:#1f1f25;--plot:#2b2b33;--line:#43434d;--muted:#b0b0b8;--ink:#e9e9ed;border-color:#4a4a55}
+.info{list-style:none;margin:0 0 8px;padding:0}
+.info li{display:flex;align-items:center;gap:6px;padding:2px 0}
+.info li::before{content:"・";color:var(--muted);flex:none}
+.info .irow{flex:1;min-width:0;background:var(--plot);border:1px solid var(--line);border-radius:2px;color:var(--ink);font-size:14px;padding:6px 8px;min-height:36px}
+.info .irow:focus{outline:none;border-color:var(--noz)}
 .empty{color:var(--muted);padding:4px 0;font-size:13px}
 .empty .acts{margin-top:12px}
 .ph{display:flex;align-items:center;gap:8px;margin-bottom:14px}
@@ -350,7 +355,7 @@ function apply(d){
     const mat={};
     if(p.mat&&typeof p.mat==='object')Object.keys(p.mat).forEach(id=>{if(p.mat[id])mat[id]=1});
     else if(Array.isArray(p.opp))p.opp.forEach((v,i)=>{if(v&&DEF_MATS[i])mat[DEF_MATS[i].id]=1});
-    return {id:String(p.id),name:String(p.name||''),full:String(p.full||''),e:clamp(p.e),o:clamp(p.o),c:(v=>Math.max(0,Math.min(10,v>10?Math.round(v/10):v)))(Math.round(+p.c)||0),w:Math.max(0,Math.min(10,Math.round(+p.w)||0)),mat,memo:String(p.memo||''),arch:!!p.arch,archAt:String(p.archAt||'')};
+    return {id:String(p.id),name:String(p.name||''),full:String(p.full||''),info:Array.isArray(p.info)?p.info.slice(0,100).map(x=>String(x)):[],e:clamp(p.e),o:clamp(p.o),c:(v=>Math.max(0,Math.min(10,v>10?Math.round(v/10):v)))(Math.round(+p.c)||0),w:Math.max(0,Math.min(10,Math.round(+p.w)||0)),mat,memo:String(p.memo||''),arch:!!p.arch,archAt:String(p.archAt||'')};
   });
   S.links=d.links&&typeof d.links==='object'?d.links:{};
   S.notes=d.notes&&typeof d.notes==='object'?d.notes:{};
@@ -407,7 +412,7 @@ function matchSet(){
     if(t){
       const notes=Object.keys(S.notes).filter(k=>k.split('|').includes(p.id)).map(k=>S.notes[k]);
       const names=S.mats.filter(m=>p.mat[m.id]).map(m=>m.name);
-      if(![p.name,p.full,p.memo].concat(notes,names).join(' ').toLowerCase().includes(t))return;
+      if(![p.name,p.full,p.memo].concat(p.info||[],notes,names).join(' ').toLowerCase().includes(t))return;
     }
     if(ms.length){const has=id=>!!p.mat[id];if(!(S.qmode==='any'?ms.some(has):ms.every(has)))return}
     out.add(p.id);
@@ -659,6 +664,7 @@ function axisBlock(label,help,idr,idn,val){
    '<input class="big" id="'+idn+'" type="number" min="1" max="100" value="'+val+'" aria-label="'+label+'"></div>'+
    '<input id="'+idr+'" type="range" min="1" max="100" value="'+val+'" aria-label="'+label+'"></div>';
 }
+const infoRows=p=>(p.info||[]).map((t,i)=>'<li><input class="irow" data-i="'+i+'" value="'+esc(t)+'" maxlength="200" placeholder="例: 誕生日 5月3日" aria-label="情報 '+(i+1)+'" autocomplete="off"><button class="xbtn" data-act="delinfo" data-i="'+i+'" aria-label="この項目を消す">×</button></li>').join('');
 function renderPanel(){renderPanel0();fillRanges();$('panel').classList.toggle('hidden',!$('panel').innerHTML.trim())}
 function renderPanel0(){
   const el=$('panel'),p=S.sel&&(S.asOf?vid(S.sel):alive(S.sel))?byId(S.sel):null;
@@ -695,7 +701,8 @@ function renderPanel0(){
    (free.length?'<div class="addrow"><select id="p-add" aria-label="つなげる人">'+free.map(o=>'<option value="'+esc(o.id)+'">'+esc(dn(o))+'</option>').join('')+'</select><button class="btn" data-act="addlink">つながりを追加</button></div>':'')+
    '<div class="hint" style="margin:6px 0 0">数字を0にすると、つながりを外します。</div></div>'+
    '<div class="sec"><h3 class="sh">軌跡<button class="q" data-help="trail" aria-label="説明">?</button></h3><ul class="hist" id="p-hist">'+histLines(p)+'</ul><div class="hint" style="margin:4px 0 0">軌跡は1日ごとに1点です。消すときは、もう一度押して確認します。</div><button class="del" data-act="clrtrail">この人の軌跡を消す</button></div>'+
-   '<div class="sec" style="padding-top:6px"><button class="del" data-act="archive">関係がなくなった（アーカイブする）</button></div>';
+   '<div class="sec" style="padding-top:6px"><button class="del" data-act="archive">関係がなくなった（アーカイブする）</button></div>'+
+   '<div class="sec"><h3 class="sh">情報</h3><ul class="info" id="p-info">'+infoRows(p)+'</ul><button class="btn" data-act="addinfo">＋ 項目を追加</button></div>';
 }
 function fill(el){const mn=+el.min||0,mx=+el.max||100;el.style.setProperty('--p',((+el.value-mn)/(mx-mn)*100)+'%')}
 function fillRanges(){document.querySelectorAll('#panel input[type=range]').forEach(fill)}
@@ -767,7 +774,7 @@ function renderArc(){
 function select(id){S.sel=id;renderPanel();drawMap()}
 function addPerson(){
   if(S.asOf){S.asOf='';renderDate()}
-  const id='n'+uid(),p={id,name:'',full:'新しい人',e:50,o:50,c:0,w:0,mat:{},memo:''};
+  const id='n'+uid(),p={id,name:'',full:'新しい人',e:50,o:50,c:0,w:0,info:[],mat:{},memo:''};
   S.people.push(p);recordPos(p);persist();select(id);
   const n=$('p-full');if(n){n.focus();n.select()}
   if($('panel').scrollIntoView)$('panel').scrollIntoView({behavior:'smooth',block:'start'});
@@ -822,6 +829,14 @@ document.addEventListener('click',ev=>{
       p.arch=true;p.archAt=today();
       LAST='「'+dn(p)+'」をアーカイブしました。上の「アーカイブ」から戻せます。';
       persist();select(null);renderSearch();renderArcBtn();
+    }
+    if(act==='addinfo'&&p){
+      p.info=p.info||[];p.info.push('');persist();renderPanel();
+      const rows=document.querySelectorAll('#p-info .irow');if(rows.length)rows[rows.length-1].focus();
+    }
+    if(act==='delinfo'&&p){
+      if(a.getAttribute('data-ok')!=='1'){arm(a,'消す？');return}
+      p.info.splice(+a.getAttribute('data-i'),1);persist();renderPanel();
     }
     if(act==='clrtrail'&&p){
       if(a.getAttribute('data-ok')!=='1'){arm(a,'もう一度押すと、この人の軌跡を消します');return}
@@ -888,6 +903,7 @@ $('panel').addEventListener('input',ev=>{
   if(t.id==='p-full'){p.full=t.value.trim();const tt=$('p-title');if(tt)tt.textContent=dn(p);persist();drawMap();return}
   if(t.classList.contains('lmemo')){S.notes[lk(p.id,t.closest('.lrow').getAttribute('data-other'))]=t.value;persist();return}
   if(t.id==='p-memo'){p.memo=t.value;persist();return}
+  if(t.classList.contains('irow')){p.info[+t.getAttribute('data-i')]=t.value;persist();return}
   const tk={'p-k':'c','p-kn':'c','p-w':'w','p-wn':'w'}[t.id];
   if(tk){
     if(t.value==='')return;
