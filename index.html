@@ -204,6 +204,13 @@ dialog::backdrop{background:rgba(0,0,0,.65)}
   .btn.ic{width:34px}
   .top .btn.main{padding:8px 12px}
 }
+.menuwrap{position:relative}
+.menu{position:absolute;right:0;top:calc(100% + 6px);min-width:190px;background:var(--raised);border:1px solid var(--line);border-radius:12px;padding:6px;z-index:40;box-shadow:0 8px 24px rgba(0,0,0,.45)}
+.mi{display:flex;align-items:center;gap:10px;width:100%;border:0;background:none;color:var(--ink);font-size:14px;padding:8px 12px;border-radius:8px;min-height:40px;text-align:left}
+.mi:hover{background:var(--line);color:var(--strong)}
+.mi svg{flex:none;color:var(--muted)}
+.btn:disabled{opacity:.35;cursor:default}
+.btn:disabled:hover{border-color:var(--line);color:var(--ink)}
 .vbar{padding:0 0 10px}
 .vbar .seg{display:flex;width:100%}
 .vbar .seg button{flex:1;font-size:13px;padding:4px 8px}
@@ -219,13 +226,20 @@ dialog::backdrop{background:rgba(0,0,0,.65)}
       <span class="lbl"><label class="sw"><input type="checkbox" id="t-trail" checked><span class="tr"></span>軌跡</label><button class="q" data-help="trail" aria-label="軌跡の説明">?</button></span>
     </div>
     <div class="acts">
-      <button class="btn ic" id="b-home" title="ホーム" aria-label="ホーム"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11l8-7 8 7M6 10v10h12V10M10 20v-6h4v6"/></svg></button>
+      <button class="btn ic" id="b-undo" title="ひとつ戻る" aria-label="ひとつ戻る" disabled><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14L4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3"/></svg></button>
+      <button class="btn ic" id="b-redo" title="ひとつ進む" aria-label="ひとつ進む" disabled><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 14l5-5-5-5M20 9H10a6 6 0 0 0 0 12h3"/></svg></button>
       <button class="btn main" id="b-add">＋ 人を追加</button>
-      <button class="btn ic" id="b-q" title="検索" aria-label="検索" aria-expanded="false"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg></button>
-      <button class="btn ic" id="b-save" title="保存" aria-label="保存"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h11l3 3v13H5zM8 4v5h7V4M8 20v-6h8v6"/></svg></button>
-      <button class="btn ic" id="b-png" title="画像を保存" aria-label="画像を保存"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg></button>
-      <button class="btn ic" id="b-help" title="使い方" aria-label="使い方"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7M12 17v.01"/></svg></button>
-      <button class="btn ic" id="b-set" title="設定" aria-label="設定"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+      <div class="menuwrap">
+        <button class="btn ic" id="b-menu" title="メニュー" aria-label="メニュー" aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+        <div class="menu hidden" id="menu" role="menu">
+        <button class="mi" id="b-home" role="menuitem"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11l8-7 8 7M6 10v10h12V10M10 20v-6h4v6"/></svg><span>ホーム</span></button>
+        <button class="mi" id="b-q" role="menuitem"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg><span>検索</span></button>
+        <button class="mi" id="b-save" role="menuitem"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h11l3 3v13H5zM8 4v5h7V4M8 20v-6h8v6"/></svg><span>保存</span></button>
+        <button class="mi" id="b-png" role="menuitem"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg><span>画像を保存</span></button>
+        <button class="mi" id="b-help" role="menuitem"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7M12 17v.01"/></svg><span>使い方</span></button>
+        <button class="mi" id="b-set" role="menuitem"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span>設定</span></button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -394,8 +408,19 @@ function snapshot(){
   Object.keys(S.hist).forEach(id=>{if(!dr.has(id))hist[id]=S.hist[id]});
   return {v:3,people:S.people.filter(p=>!p.draft),links:S.links,notes:S.notes,hist:hist,mats:S.mats,trailGap:S.trailGap,guide:S.guide,guideC:S.guideC,guideW:S.guideW,showLinks:S.showLinks,showTrail:S.showTrail}}
 function persist(){
-  try{localStorage.setItem(KEY,JSON.stringify(snapshot()));if(KEY===KEY_REAL&&!noDirty)markDirty();return true}
+  try{histNote();localStorage.setItem(KEY,JSON.stringify(snapshot()));if(KEY===KEY_REAL&&!noDirty)markDirty();return true}
   catch(e){if(!warned){warned=true;alert('この環境ではデータを保存できません。設定からバックアップを書き出してください。')}return false}
+}
+/* ---------- 戻る・進む(直近の操作。1秒以内の続けた変更は1回にまとめる) ---------- */
+const HIST={u:[],r:[],cur:null,t:0};
+function histUi(){const u=$('b-undo'),r=$('b-redo');if(u)u.disabled=!HIST.u.length;if(r)r.disabled=!HIST.r.length}
+function histReset(){HIST.u=[];HIST.r=[];HIST.cur=JSON.stringify(snapshot());HIST.t=0;histUi()}
+function histNote(){
+  const now=JSON.stringify(snapshot());
+  if(HIST.cur===null){HIST.cur=now;return}
+  if(now===HIST.cur)return;
+  if(!HIST.u.length||Date.now()-HIST.t>1000){HIST.u.push(HIST.cur);if(HIST.u.length>60)HIST.u.shift()}
+  HIST.t=Date.now();HIST.cur=now;HIST.r=[];histUi();
 }
 // 保存データの1人分を、アプリ内の形に直す
 function normPerson(p){
@@ -1195,11 +1220,9 @@ wheel.addEventListener('keydown',ev=>{
 $('q-now').onclick=()=>setAsOf('');
 let saveT=0;
 $('b-save').onclick=()=>{
-  const b=$('b-save'),ok=persist(),old=b.getAttribute('data-svg')||b.innerHTML;
-  b.setAttribute('data-svg',old);
-  b.innerHTML=ok?'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>':'<span style="font-size:11px">失敗</span>';
-  b.style.color=ok?'var(--strong)':'';b.title=ok?'保存しました':'保存できませんでした';
-  clearTimeout(saveT);saveT=setTimeout(()=>{b.innerHTML=old;b.style.color='';b.title='保存'},1500);
+  const lab=$('b-save').querySelector('span'),ok=persist();
+  lab.textContent=ok?'保存しました':'保存できませんでした';
+  clearTimeout(saveT);saveT=setTimeout(()=>{lab.textContent='保存';closeMenu()},1200);
 };
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')persist();else syncNow()});
 window.addEventListener('pagehide',()=>{persist()});
@@ -1301,6 +1324,7 @@ function setMaint(on,switching){
     else if(S.maint)loadSample();
     else apply({people:[],links:{},hist:{},guide:cloneGuide()});
     $('t-links').checked=S.showLinks;$('t-trail').checked=S.showTrail;
+    histReset();
   }
   $('s-maint').checked=S.maint;$('s-sample').classList.toggle('hidden',!S.maint);$('mbar').classList.toggle('hidden',!S.maint);
 }
@@ -1308,6 +1332,34 @@ $('s-maint').onchange=e=>{setMaint(e.target.checked,true);renderSet();render();s
 document.querySelectorAll('#v-seg button').forEach(b=>{b.onclick=()=>{VIEW=b.getAttribute('data-view')==='cw'?'cw':'pos';drawMap()}});
 $('t-links').onchange=e=>{S.showLinks=e.target.checked;persist();drawMap()};
 $('t-trail').onchange=e=>{S.showTrail=e.target.checked;persist();drawMap()};
+
+function histGo(dir){
+  const from=dir<0?HIST.u:HIST.r,to=dir<0?HIST.r:HIST.u;if(!from.length)return;
+  to.push(JSON.stringify(snapshot()));
+  const prev=from.pop();
+  if(!apply(JSON.parse(prev)))return;
+  HIST.cur=JSON.stringify(snapshot());HIST.t=0;
+  if(S.sel&&!S.people.some(p=>p.id===S.sel&&!p.trash))S.sel=null;
+  persist();$('t-links').checked=S.showLinks;$('t-trail').checked=S.showTrail;
+  render();histUi();
+}
+$('b-undo').onclick=()=>histGo(-1);
+$('b-redo').onclick=()=>histGo(1);
+document.addEventListener('keydown',ev=>{
+  if(!(ev.ctrlKey||ev.metaKey)||ev.altKey)return;
+  const t=ev.target;if(t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.isContentEditable))return;
+  if($('set').open||$('help').open||$('about').open)return;
+  const k=(ev.key||'').toLowerCase();
+  if(k==='z'&&!ev.shiftKey){ev.preventDefault();histGo(-1)}else if(k==='y'||(k==='z'&&ev.shiftKey)){ev.preventDefault();histGo(1)}
+});
+
+/* ---------- メニュー ---------- */
+const menuEl=$('menu'),menuBtn=$('b-menu');
+function closeMenu(){menuEl.classList.add('hidden');menuBtn.setAttribute('aria-expanded','false')}
+menuBtn.onclick=ev=>{ev.stopPropagation();const open=menuEl.classList.contains('hidden');menuEl.classList.toggle('hidden',!open);menuBtn.setAttribute('aria-expanded',open?'true':'false')};
+menuEl.addEventListener('click',ev=>{if(ev.target.closest&&ev.target.closest('#b-save'))return;closeMenu()});
+document.addEventListener('pointerdown',ev=>{if(!menuEl.classList.contains('hidden')&&!(ev.target.closest&&ev.target.closest('.menuwrap')))closeMenu()});
+document.addEventListener('keydown',ev=>{if(ev.key==='Escape'&&!menuEl.classList.contains('hidden')){closeMenu();menuBtn.focus()}});
 
 let rt;
 const redraw=()=>{clearTimeout(rt);rt=setTimeout(drawMap,60)};
@@ -1341,7 +1393,7 @@ function renderSync(){
 function applyRemote(row){
   noDirty=true;
   try{if(!apply(row.data))throw new Error('クラウドのデータが読めません');S.sel=null;persist()}finally{noDirty=false}
-  setMeta({rev:row.updated_at,dirty:false});
+  setMeta({rev:row.updated_at,dirty:false});histReset();
   $('t-links').checked=S.showLinks;$('t-trail').checked=S.showTrail;
   render();setSync('クラウドの内容を読み込みました '+hhmm());
 }
@@ -1404,6 +1456,7 @@ function initSync(){
  setMaint(m,false);
  if(m){let r=null;try{r=localStorage.getItem(KEY)}catch(e){}if(r)restore();else loadSample()}else restore()}
 $('t-links').checked=S.showLinks;$('t-trail').checked=S.showTrail;
+histReset();
 render();
 initSync();
 try{
