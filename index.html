@@ -86,22 +86,22 @@ h1{font-size:15px;margin:0;font-weight:500;letter-spacing:.14em;color:var(--stro
 .empty .acts{margin-top:12px}
 .undo{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .undo .btn{flex:none}
-.ph{display:flex;align-items:center;gap:8px;margin-bottom:16px}
+.ph{display:flex;align-items:center;gap:8px;margin-bottom:10px}
 .ph input{flex:1;min-width:0;font-size:20px;font-weight:500;color:var(--strong);letter-spacing:.06em;border:0;border-bottom:1px solid transparent;background:none;border-radius:0;padding:2px 0}
 .ph input{border-bottom-color:var(--line)}
 .ph input:focus{outline:none}
 .fl{display:block;font-size:12px;color:var(--muted);margin:-4px 0 16px}
 .fl input{display:block;width:100%;margin-top:2px;background:none;border:0;border-bottom:1px solid var(--line);color:var(--ink);font-size:14px;padding:3px 0}
 .fl input:focus{outline:none;border-bottom-color:var(--noz)}
-.lmemo{width:100%;margin-top:4px;background:var(--plot);border:1px solid var(--line);border-radius:8px;color:var(--ink);font-size:14px;padding:8px 12px}
+.lmemo{width:100%;margin-top:2px;background:var(--plot);border:1px solid var(--line);border-radius:8px;color:var(--ink);font-size:13px;padding:5px 10px}
 .lmemo:focus{outline:none;border-color:var(--noz)}
 .hist li:first-child time{color:var(--strong)}
 .xbtn{border:0;background:none;font-size:22px;line-height:1;padding:6px 8px;color:var(--muted)}
 .xbtn:hover{color:var(--strong)}
-.sec{border-top:1px solid var(--line);padding-top:16px;margin-top:20px}
+.sec{border-top:1px solid var(--line);padding-top:10px;margin-top:12px}
 .nms{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:8px 16px;margin:4px 0 12px}
 .nms .fl{margin:0}
-.axs{display:grid;grid-template-columns:repeat(auto-fit,minmax(188px,1fr));gap:16px 16px;margin-top:-4px}
+.axs{display:grid;grid-template-columns:repeat(auto-fit,minmax(188px,1fr));gap:8px 16px;margin-top:-4px}
 .ax{min-width:0}
 .ax .axh{display:flex;align-items:center;gap:8px;margin-bottom:0;font-size:14px;color:var(--ink);white-space:nowrap}
 .ax .axh .big{margin-left:auto}
@@ -118,26 +118,26 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;bac
 .reasons .rl{font-size:12px;color:var(--muted);margin-bottom:2px}
 .chk{display:flex;align-items:center;gap:12px;min-height:36px;font-size:14px}
 .chk input{width:18px;height:18px;accent-color:var(--ink);margin:0}
-.sh{font-size:14px;color:var(--ink);margin:0 0 8px;display:flex;align-items:center;gap:8px;font-weight:500}
+.sh{font-size:14px;color:var(--ink);margin:0 0 4px;display:flex;align-items:center;gap:8px;font-weight:500}
 textarea:focus{outline:none;border-color:var(--noz)}
 textarea{width:100%;min-height:72px;border:1px solid var(--line);background:var(--plot);border-radius:8px;padding:8px 12px;font-size:14px;resize:vertical}
-.lrow{padding:10px 0;border-top:1px solid var(--line)}
+.lrow{padding:6px 0;border-top:1px solid var(--line)}
 .lrow:first-of-type{border-top:0}
-.lrow .l1{display:flex;align-items:center;gap:10px}
-.lrow .nm{border:0;background:none;font-weight:500;padding:2px 0;text-align:left;flex:1;min-width:0;color:var(--strong)}
+.lrow .l1{display:flex;align-items:center;gap:8px}
+.lrow .nm{border:0;background:none;font-weight:500;padding:2px 0;text-align:left;flex:0 1 auto;min-width:0;max-width:45%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--strong)}
 .lrow .nm:hover{color:var(--strong);text-decoration:underline;text-underline-offset:3px}
 .lrow .snum{width:3.2em;text-align:right;font-size:16px;font-weight:400;color:var(--strong);background:none;border:0;border-bottom:1px solid transparent;font-variant-numeric:tabular-nums;-moz-appearance:textfield}
 .lrow .snum:hover,.lrow .snum:focus{border-bottom-color:var(--noz);outline:none}
 .lrow .snum::-webkit-outer-spin-button,.lrow .snum::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
-.lrow .tier{font-size:12px;color:var(--muted);margin-top:-2px}
+.lrow .tier{font-size:12px;color:var(--muted);flex:1;min-width:0;line-height:1.3}
 .addrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
 .addrow select{flex:1;min-width:0;border:1px solid var(--line);background:var(--plot);border-radius:8px;padding:8px 12px;min-height:40px}
 .hist{list-style:none;margin:0;padding:0;font-size:12px}
 .hist li{display:flex;gap:12px;padding:4px 0;color:var(--ink)}
 .hist time{color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
-.del{border:0;background:none;color:var(--muted);font-size:12px;padding:6px 0;min-height:36px}
-.del + .del{margin-left:18px}
-.del:hover{color:var(--strong)}
+.del{border:1px solid var(--line);background:none;border-radius:8px;color:var(--ink);font-size:13px;padding:6px 14px;min-height:36px;margin-top:8px}
+.del + .del{margin-left:8px}
+.del:hover{border-color:var(--muted);color:var(--strong)}
 dialog{border:1px solid var(--line);border-radius:14px;background:var(--raised);color:var(--ink);padding:0;width:min(540px,calc(100vw - 24px));max-height:calc(100% - 24px)}
 dialog::backdrop{background:rgba(0,0,0,.65)}
 .dlg{padding:18px}
@@ -553,8 +553,8 @@ function helpData(key,v){
    close:['自分との仲の良さ（1〜10）','<p>あなたとその人が、<b>どれだけ仲が良いか</b>です。マップでは<b>点の大きさと濃さ</b>で表します。大きく濃いほど仲が良い人です。</p>'+gxTable('c')+'<p>「大切にしたい」は気持ちの強さ、「自分との仲の良さ」は関係の近さです。別々に付けます。</p>','gc'],
    want:['仲良くしたい（1〜10）','<p>あなたが、その人と<b>どれくらい仲良くなりたいか</b>の希望です。「自分との仲の良さ」と同じ1〜10で付けます。</p>'+gxTable('w')+'<p>「自分との仲の良さ」と比べて、マップの点にマークが付きます。</p><table><tr><th>マーク</th><th>意味</th></tr><tr><td>赤 ！</td><td>仲良くしたい が 自分との仲の良さ より大きい。希望に届いていないので、もっと関わるべきです。</td></tr><tr><td>緑 ✓</td><td>自分との仲の良さ が 仲良くしたい と同じか、それ以上。希望どおりの関係です。</td></tr></table>','gw'],
    axisO:['縦軸：大切にすべき（1〜100）','<p>「この縁を活かすべきか」の度合いです。気持ちとは別に付けます。</p><p>詳細の中に、考える材料のチェックがあります。チェックは数値を自動では変えません。材料は設定で増やしたり変えたりできます。</p><table>'+S.mats.map(m=>'<tr><td>□</td><td>'+esc(m.name)+'</td></tr>').join('')+'</table><p>マップの上にいるほど大きい値です。</p>'],
-   links:['関係値強度','<p>知り合い同士の関係の強さを、あなたの主観で0〜100の数字にします。強いほど線が太く濃くなります。</p><p>0は「線なし」です。スイッチで、線をマップに出すかどうかを選べます。点を選ぶと、その人の線はオレンジになり、数字が付きます。</p>'],
-   trail:['軌跡','<p>大切にしたい・大切にすべきの位置が、<b>1日ごとに1点</b>記録されます。同じ日に何度動かしても、その日の最後の位置が残ります。間隔は設定で、1週間・1か月にも変えられます。</p><p>人を選ぶと、その人の点がいつどこへ動いたかを、矢印と移動した年月日で表示します。選んでいないときは、全員の軌跡を薄く表示します。</p><p>点は、詳細の「軌跡」の欄の「×」で1つずつ、「この人の軌跡を消す」でまとめて消せます。消すときは、押したあとにもう一度押して確認します。</p>']
+   links:['関係値強度','<p>知り合い同士の関係の強さを、あなたの主観で0〜100の数字にします。強いほど線が太く濃くなります。</p><p>0は「線なし」です。数字を0にすると、つながりを外します。スイッチで、線をマップに出すかどうかを選べます。点を選ぶと、その人の線はオレンジになり、数字が付きます。</p>'],
+   trail:['軌跡','<p>大切にしたい・大切にすべきの位置が、<b>1日ごとに1点</b>記録されます。同じ日に何度動かしても、その日の最後の位置が残ります。間隔は設定で、1週間・1か月にも変えられます。</p><p>人を選ぶと、その人の点がいつどこへ動いたかを、矢印と移動した年月日で表示します。選んでいないときは、全員の軌跡を薄く表示します。</p><p>消したい記録をタップすると、その横に「×」が出ます。開始の記録は消せません。点は、詳細の「軌跡」の欄の「×」で1つずつ、「この人の軌跡を消す」でまとめて消せます。消すときは、押したあとにもう一度押して確認します。</p>']
   };
   if(key==='strength'){
     const cur=v==null?-1:tierIndex(v);
@@ -742,9 +742,9 @@ function histLines(p,ro){
 }
 function linkRow(p,oid){
   const o0=byId(oid),o={name:dn(o0)},v=strength(p.id,oid);
-  return '<div class="lrow" data-other="'+esc(oid)+'"><div class="l1"><button class="nm" data-act="goto" data-id="'+esc(oid)+'">'+esc(o.name)+'</button>'+
+  return '<div class="lrow" data-other="'+esc(oid)+'"><div class="l1"><button class="nm" data-act="goto" data-id="'+esc(oid)+'">'+esc(o.name)+'</button><span class="tier">'+esc(tierText(v))+'</span>'+
    '<input class="snum" type="number" min="0" max="100" value="'+v+'" aria-label="'+esc(o.name)+'との関係値強度"><button class="q" data-help="strength" data-v="'+v+'" aria-label="説明">?</button></div>'+
-   '<input class="srange" type="range" min="0" max="100" value="'+v+'" aria-label="'+esc(o.name)+'との関係値強度"><div class="tier">'+esc(tierText(v))+'</div>'+
+   '<input class="srange" type="range" min="0" max="100" value="'+v+'" aria-label="'+esc(o.name)+'との関係値強度">'+
    '<input class="lmemo" type="text" maxlength="200" placeholder="この関係のメモ" value="'+esc(S.notes[lk(p.id,oid)]||'')+'" aria-label="この関係のメモ"></div>';
 }
 function tenBlock(label,help,idr,idn,val,tn){
@@ -802,14 +802,14 @@ function renderPanel0(){
    '<div class="sec" style="padding-top:8px;margin-top:8px">'+
    '<div class="reasons"><div class="rl">考える材料（当てはまるもの）</div>'+
    (S.mats.length?S.mats.map(m=>'<div class="chk"><label><input type="checkbox" class="p-c" data-id="'+esc(m.id)+'"'+(p.mat[m.id]?' checked':'')+'>'+esc(m.name)+'</label></div>').join(''):'<div class="hint" style="margin:0">材料がありません。設定で追加できます。</div>')+'</div></div>'+
-   '<div class="sec"><h3 class="sh">メモ</h3><textarea id="p-memo" aria-label="メモ">'+esc(p.memo)+'</textarea></div>'+
    '<div class="sec"><h3 class="sh">つながっている人（'+linked.length+'人）<button class="q" data-help="strength" aria-label="関係値強度の説明">?</button></h3>'+
-   (linked.length?linked.map(o=>linkRow(p,o.id)).join(''):'<div class="empty" style="padding:2px 0 6px">まだありません。下から追加できます。</div>')+
+   (linked.length?linked.map(o=>linkRow(p,o.id)).join(''):'')+
    (free.length?'<div class="addrow"><select id="p-add" aria-label="つなげる人">'+free.map(o=>'<option value="'+esc(o.id)+'">'+esc(dn(o))+'</option>').join('')+'</select><button class="btn" data-act="addlink">つながりを追加</button></div>':'')+
-   '<div class="hint" style="margin:6px 0 0">数字を0にすると、つながりを外します。</div></div>'+
-   '<div class="sec"><h3 class="sh">軌跡<button class="q" data-help="trail" aria-label="説明">?</button></h3><ul class="hist" id="p-hist">'+histLines(p)+'</ul><div class="hint" style="margin:4px 0 0">軌跡は1日ごとに1点です。消したい記録をタップすると、その横に×が出ます。開始の記録は消せません。</div><button class="del" data-act="clrtrail">この人の軌跡を消す</button></div>'+
-   '<div class="sec" style="padding-top:6px"><button class="del" data-act="archive">関係がなくなった（アーカイブする）</button><button class="del" data-act="delperson">この人を削除する（ゴミ箱に入ります）</button></div>'+
-   '<div class="sec"><h3 class="sh">情報</h3><ul class="info" id="p-info">'+infoRows(p)+'</ul><button class="btn" data-act="addinfo">＋ 項目を追加</button></div>';
+   '</div>'+
+   '<div class="sec"><h3 class="sh">情報</h3><ul class="info" id="p-info">'+infoRows(p)+'</ul><button class="btn" data-act="addinfo">＋ 項目を追加</button></div>'+
+   '<div class="sec"><h3 class="sh">メモ</h3><textarea id="p-memo" aria-label="メモ">'+esc(p.memo)+'</textarea></div>'+
+   '<div class="sec"><h3 class="sh">軌跡<button class="q" data-help="trail" aria-label="説明">?</button></h3><ul class="hist" id="p-hist">'+histLines(p)+'</ul><button class="del" data-act="clrtrail">軌跡を消す</button></div>'+
+   '<div class="sec" style="padding-top:6px"><button class="del" data-act="archive">アーカイブ</button><button class="del" data-act="delperson">削除</button></div>';
 }
 function fill(el){const mn=+el.min||0,mx=+el.max||100;el.style.setProperty('--p',((+el.value-mn)/(mx-mn)*100)+'%')}
 function fillRanges(){document.querySelectorAll('#panel input[type=range]').forEach(fill)}
