@@ -319,13 +319,17 @@ dialog::backdrop{background:rgba(0,0,0,.65)}
   </div></details>
   <details class="acc"><summary>データのバックアップ・削除</summary><div class="accb"><p>データはこの端末の中だけに保存されています。</p>
   <p>バックアップは、人・つながり・軌跡・目安をまとめた1つのファイルです。</p>
+  <p>「追加で読み込む」は、今のデータを残して、新しい人とつながりだけを足します。名前が同じ人は、1人にまとめます。「置き換えて読み込む」は、今のデータを全て入れ替えます。</p>
   <div class="acts l">
     <button class="btn" id="s-export">バックアップを書き出す</button>
-    <button class="btn" id="s-import">バックアップを読み込む</button>
+    <button class="btn" id="s-merge">追加で読み込む</button>
+    <button class="btn" id="s-import">置き換えて読み込む</button>
     <button class="btn" id="s-wipe">全データを削除</button>
     <input type="file" id="s-file" accept=".json,application/json" class="hidden">
+    <input type="file" id="s-mfile" accept=".json,application/json" class="hidden">
   </div>
-  <p id="s-msg" style="font-size:12px;color:var(--muted);margin-top:8px"></p></div></details>
+  <p id="s-msg" style="font-size:12px;color:var(--muted);margin-top:8px"></p>
+  <div class="acts l"><button class="btn hidden" id="s-unmerge">追加で読み込む前の状態に戻す</button></div></div></details>
   <details class="acc" id="acc-arc"><summary>アーカイブ保管庫<span id="arc-n" style="color:var(--muted);margin-left:6px"></span></summary><div class="accb">
   <p>関係がなくなった人です。マップ・検索・つながりの一覧には出ません。データは残り、いつでも戻せます。</p>
   <div id="arc-list"></div>
@@ -389,15 +393,17 @@ function persist(){
   try{localStorage.setItem(KEY,JSON.stringify(snapshot()));if(KEY===KEY_REAL&&!noDirty)markDirty();return true}
   catch(e){if(!warned){warned=true;alert('この環境ではデータを保存できません。設定からバックアップを書き出してください。')}return false}
 }
+// 保存データの1人分を、アプリ内の形に直す
+function normPerson(p){
+  const mat={};
+  if(p.mat&&typeof p.mat==='object')Object.keys(p.mat).forEach(id=>{if(p.mat[id])mat[id]=1});
+  else if(Array.isArray(p.opp))p.opp.forEach((v,i)=>{if(v&&DEF_MATS[i])mat[DEF_MATS[i].id]=1});
+  return {id:String(p.id),name:String(p.name||''),full:String(p.full||''),info:Array.isArray(p.info)?p.info.slice(0,100).map(x=>(x&&typeof x==='object')?{t:String(x.t||''),d:String(x.d||'')}:{t:String(x),d:''}):[],e:clamp(p.e),o:clamp(p.o),c:(v=>Math.max(0,Math.min(10,v>10?Math.round(v/10):v)))(Math.round(+p.c)||0),w:Math.max(0,Math.min(10,Math.round(+p.w)||0)),mat,memo:String(p.memo||''),arch:!!p.arch,archAt:String(p.archAt||''),trash:!!p.trash,trashAt:String(p.trashAt||'')};
+}
 function apply(d){
   if(!d||!Array.isArray(d.people))return false;
   S.mats=Array.isArray(d.mats)&&d.mats.length?d.mats.map(m=>({id:String(m.id),name:String(m.name||'材料')})):cloneMats();
-  S.people=d.people.map(p=>{
-    const mat={};
-    if(p.mat&&typeof p.mat==='object')Object.keys(p.mat).forEach(id=>{if(p.mat[id])mat[id]=1});
-    else if(Array.isArray(p.opp))p.opp.forEach((v,i)=>{if(v&&DEF_MATS[i])mat[DEF_MATS[i].id]=1});
-    return {id:String(p.id),name:String(p.name||''),full:String(p.full||''),info:Array.isArray(p.info)?p.info.slice(0,100).map(x=>(x&&typeof x==='object')?{t:String(x.t||''),d:String(x.d||'')}:{t:String(x),d:''}):[],e:clamp(p.e),o:clamp(p.o),c:(v=>Math.max(0,Math.min(10,v>10?Math.round(v/10):v)))(Math.round(+p.c)||0),w:Math.max(0,Math.min(10,Math.round(+p.w)||0)),mat,memo:String(p.memo||''),arch:!!p.arch,archAt:String(p.archAt||''),trash:!!p.trash,trashAt:String(p.trashAt||'')};
-  });
+  S.people=d.people.map(normPerson);
   S.links=d.links&&typeof d.links==='object'?d.links:{};
   S.notes=d.notes&&typeof d.notes==='object'?d.notes:{};
   S.trailGap=[1,7,30].includes(+d.trailGap)?+d.trailGap:1;
@@ -410,6 +416,50 @@ function apply(d){
   S.showLinks=d.showLinks!==false;S.showTrail=d.showTrail!==false;
   ensureHist();
   return true;
+}
+const nkey=t=>String(t||'').replace(/[\s\u3000]+/g,'').toLowerCase();
+const MERGE_BAK='positioning-map.before-merge';
+function mergeIn(d){
+  if(!d||!Array.isArray(d.people))return null;
+  const inc=d.people.map(p=>Object.assign(normPerson(p),{linkOnly:!!p.linkOnly,aliases:(Array.isArray(p.aliases)?p.aliases:[]).map(String)}));
+  // 材料は、名前が同じものに合わせる。使う人がいて、今のアプリにない材料だけを足す
+  const matName={};
+  (Array.isArray(d.mats)?d.mats:[]).forEach(m=>{matName[String(m.id)]=String(m.name||'材料')});
+  const mapMat=k=>{
+    const nm=matName[k];
+    if(!nm)return S.mats.some(x=>x.id===k)?k:null;
+    const ex=S.mats.find(x=>x.name===nm);if(ex)return ex.id;
+    const id='m'+uid();S.mats.push({id,name:nm});return id;
+  };
+  const idMap={},st={added:0,merged:0,links:0,skipped:[],skippedLinks:0};
+  inc.forEach(p=>{
+    const keys=[p.name,p.full].concat(p.aliases).map(nkey).filter(Boolean);
+    const ex=S.people.find(q=>!q.trash&&[q.name,q.full].map(nkey).some(k=>k&&keys.includes(k)));
+    if(ex){
+      idMap[p.id]=ex.id;
+      // 今ある値は変えない。情報は、同じ文がなければ足す。空欄のメモ・本名だけ埋める
+      p.info.forEach(it=>{if(it.t&&!(ex.info||[]).some(x=>x.t===it.t)){ex.info=ex.info||[];ex.info.push(it)}});
+      if(!ex.memo&&p.memo)ex.memo=p.memo;
+      if(!ex.full&&p.full)ex.full=p.full;
+      st.merged++;
+    }else if(p.linkOnly){
+      st.skipped.push(dn(p));
+    }else{
+      const id='n'+uid(),mat={};
+      Object.keys(p.mat).forEach(k=>{const m=mapMat(k);if(m)mat[m]=1});
+      const np=Object.assign({},p,{id,mat});delete np.linkOnly;delete np.aliases;
+      S.people.push(np);S.hist[id]=[{d:today(),e:np.e,o:np.o}];idMap[p.id]=id;st.added++;
+    }
+  });
+  Object.keys(d.links||{}).forEach(k=>{
+    const [a,b]=k.split('|');
+    if(!idMap[a]||!idMap[b]){st.skippedLinks++;return}
+    if(idMap[a]===idMap[b])return;
+    const nk=lk(idMap[a],idMap[b]);
+    if(!S.links[nk]){S.links[nk]=Math.max(0,Math.min(100,Math.round(+d.links[k])||0));st.links++}
+    const note=(d.notes||{})[k];if(note&&!S.notes[nk])S.notes[nk]=String(note);
+  });
+  return st;
 }
 // 旧版(感情1〜5・機会0〜4)のデータを1〜100に直す
 function convertV2(d){
@@ -791,6 +841,7 @@ function renderSet(){
   renderMats();renderGX('c');renderGX('w');
   $('trail-gap').value=String(S.trailGap);
   renderSync();renderArc();renderTrash();
+  if(typeof showUnmerge==='function')showUnmerge();
   $('set-rows').innerHTML=S.guide.map((g,i)=>'<tr><td><input class="gs" type="number" min="0" max="100" value="'+g.s+'"'+(i===0?' disabled':'')+' aria-label="開始値"></td>'+
     '<td><input class="gt" value="'+esc(g.t)+'" aria-label="説明"></td><td>'+(i?'<button class="btn" data-gdel="'+i+'">削除</button>':'')+'</td></tr>').join('');
 }
@@ -1156,6 +1207,36 @@ $('s-export').onclick=()=>{
   setMsg('バックアップを書き出しました。');
 };
 $('s-import').onclick=()=>$('s-file').click();
+const showUnmerge=()=>{let has=false;try{has=!!localStorage.getItem(MERGE_BAK)}catch(e){}$('s-unmerge').classList.toggle('hidden',!has)};
+$('s-merge').onclick=()=>$('s-mfile').click();
+$('s-mfile').onchange=ev=>{
+  const f=ev.target.files[0];if(!f)return;
+  const rd=new FileReader();
+  rd.onload=()=>{
+    try{
+      const d=JSON.parse(String(rd.result)),data=d.data||d;
+      if(!data||!Array.isArray(data.people)){setMsg('読み込めませんでした。このアプリのバックアップではありません。');return}
+      const before=JSON.stringify(snapshot());
+      const st=mergeIn(data);
+      if(!st){setMsg('読み込めませんでした。');return}
+      try{localStorage.setItem(MERGE_BAK,before)}catch(e){}
+      S.sel=null;persist();renderSet();render();showUnmerge();
+      let m='追加 '+st.added+'人、すでにいた人 '+st.merged+'人（情報だけ足しました）、つながり '+st.links+'件を追加しました。今のデータは、そのまま残っています。';
+      if(st.skipped.length)m+=' 「'+st.skipped.join('」「')+'」は見つからなかったため、その人とのつながり '+st.skippedLinks+'件は入れていません。';
+      setMsg(m);
+    }catch(e){setMsg('読み込めませんでした。ファイルが壊れている可能性があります。')}
+  };
+  rd.readAsText(f,'utf-8');ev.target.value='';
+};
+$('s-unmerge').onclick=ev=>{
+  const b=ev.currentTarget;
+  if(b.getAttribute('data-ok')!=='1'){arm(b,'もう一度押すと、追加する前の状態に戻します');return}
+  disarm();
+  let bak=null;try{bak=localStorage.getItem(MERGE_BAK)}catch(e){}
+  if(!bak){showUnmerge();return}
+  try{if(apply(JSON.parse(bak))){S.sel=null;persist();try{localStorage.removeItem(MERGE_BAK)}catch(e){}renderSet();render();showUnmerge();setMsg('追加で読み込む前の状態に戻しました。')}}
+  catch(e){setMsg('戻せませんでした。')}
+};
 $('s-file').onchange=ev=>{
   const f=ev.target.files[0];if(!f)return;
   const rd=new FileReader();
