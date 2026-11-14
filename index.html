@@ -75,7 +75,7 @@ h1{font-size:15px;margin:0;font-weight:500;letter-spacing:.14em;color:var(--stro
 #map svg{display:block;width:100%;height:auto}
 .hint{font-size:12px;color:var(--muted);margin:4px 8px 8px}
 .panel{padding:16px;--raised:#1b1b1d;--plot:#262628;--line:#38383c;--muted:#a8a8ae;--ink:#e8e8ea;border-color:#38383c}
-.ax .tier{font-size:12px;color:var(--muted);margin-top:-2px;min-height:1.7em}
+.ax .axt{flex:1;min-width:0;font-size:12px;font-weight:400;line-height:1.25;color:var(--muted);white-space:normal}
 .info{list-style:none;margin:0 0 8px;padding:0}
 .info li{display:flex;align-items:center;gap:6px;padding:2px 0}
 .info li::before{content:"・";color:var(--muted);flex:none}
@@ -316,6 +316,16 @@ dialog::backdrop{background:rgba(0,0,0,.65)}
   <div class="stl"><table><thead><tr><th>から</th><th>説明</th><th></th></tr></thead><tbody id="set-rows"></tbody></table></div>
   <div class="acts l"><button class="btn" id="set-add">段階を追加</button><button class="btn" id="set-reset">初期値に戻す</button></div>
   </div></details>
+  <details class="acc" id="acc-guide-e"><summary>大切にしたいの目安</summary><div class="accb">
+  <p>「?」と、詳細の数字の横に出る説明です。左の数字からその段階が始まります。</p>
+  <div class="stl"><table><thead><tr><th>から</th><th>説明</th><th></th></tr></thead><tbody id="ge-rows"></tbody></table></div>
+  <div class="acts l"><button class="btn" id="ge-add">段階を追加</button><button class="btn" id="ge-reset">初期値に戻す</button></div>
+  </div></details>
+  <details class="acc" id="acc-guide-o"><summary>大切にすべきの目安</summary><div class="accb">
+  <p>「?」と、詳細の数字の横に出る説明です。左の数字からその段階が始まります。</p>
+  <div class="stl"><table><thead><tr><th>から</th><th>説明</th><th></th></tr></thead><tbody id="go-rows"></tbody></table></div>
+  <div class="acts l"><button class="btn" id="go-add">段階を追加</button><button class="btn" id="go-reset">初期値に戻す</button></div>
+  </div></details>
   <details class="acc" id="acc-guide-c"><summary>自分との仲の良さの目安</summary><div class="accb">
   <p>「?」と、詳細のスライダーの下に出る説明です。左の数字からその段階が始まります。</p>
   <div class="stl"><table><thead><tr><th>から</th><th>説明</th><th></th></tr></thead><tbody id="gc-rows"></tbody></table></div>
@@ -394,19 +404,21 @@ const cloneGuide=()=>DEF_GUIDE.map(g=>Object.assign({},g));
 // 自分との仲の良さ(c)・仲良くしたい(w)の目安。1段階ずつ、設定で書き換えられる
 const DEF_GC=[{s:0,t:'未設定'},{s:1,t:'顔と名前を知っている'},{s:2,t:'あいさつを交わす'},{s:3,t:'世間話ができる'},{s:4,t:'何度か話したことがある'},{s:5,t:'気軽に連絡できる'},{s:6,t:'二人で会ったことがある'},{s:7,t:'悩みや本音を話せる'},{s:8,t:'よく会う・何でも相談できる'},{s:9,t:'困ったときに頼り合える'},{s:10,t:'家族のように親しい'}];
 const DEF_GW=[{s:0,t:'未設定'},{s:1,t:'今のままでよい'},{s:2,t:'機会があれば話したい'},{s:3,t:'ときどき連絡を取りたい'},{s:4,t:'気軽に話せる関係になりたい'},{s:5,t:'定期的に会いたい'},{s:6,t:'一緒に何かをしてみたい'},{s:7,t:'本音で話せる関係になりたい'},{s:8,t:'長く付き合っていきたい'},{s:9,t:'人生で大切な関係にしたい'},{s:10,t:'何でも話せる親友・家族のようになりたい'}];
-const GX={c:{k:'guideC',def:DEF_GC,rows:'gc-rows'},w:{k:'guideW',def:DEF_GW,rows:'gw-rows'}};
+const DEF_GE=[{s:1,t:'ほとんど意識しない'},{s:25,t:'少し気になる'},{s:50,t:'ふつうに好意がある'},{s:75,t:'大切にしたい'},{s:100,t:'何より大切にしたい'}];
+const DEF_GO=[{s:1,t:'活かす理由がほとんどない'},{s:25,t:'活かせる可能性は低い'},{s:50,t:'機会があれば活かしたい'},{s:75,t:'積極的に活かすべき'},{s:100,t:'必ず活かすべき'}];
+const GX={c:{k:'guideC',def:DEF_GC,rows:'gc-rows',lo:0,hi:10,step:1},w:{k:'guideW',def:DEF_GW,rows:'gw-rows',lo:0,hi:10,step:1},e:{k:'guideE',def:DEF_GE,rows:'ge-rows',lo:1,hi:100,step:10},o:{k:'guideO',def:DEF_GO,rows:'go-rows',lo:1,hi:100,step:10}};
 const cloneGX=n=>GX[n].def.map(g=>Object.assign({},g));
 
 /* ---------- 保存(データの出入りはここだけ。後でSupabaseに差し替える) ---------- */
 const KEY_REAL='positioning-map.v3',KEY_SAMPLE='positioning-map.sample',KEY_OLD='positioning-map.v2';
 let KEY=KEY_REAL;
 let SB=null,SUSER=null,syncTimer=null,noDirty=false;
-const S={people:[],links:{},notes:{},hist:{},mats:cloneMats(),trailGap:1,asOf:'',qtext:'',qmats:[],qmode:'all',guide:cloneGuide(),guideC:cloneGX('c'),guideW:cloneGX('w'),showLinks:true,showTrail:true,sel:null};
+const S={people:[],links:{},notes:{},hist:{},mats:cloneMats(),trailGap:1,asOf:'',qtext:'',qmats:[],qmode:'all',guide:cloneGuide(),guideC:cloneGX('c'),guideW:cloneGX('w'),guideE:cloneGX('e'),guideO:cloneGX('o'),showLinks:true,showTrail:true,sel:null};
 let warned=false,LAST='',LASTUNDO='';
 function snapshot(){
   const dr=new Set(S.people.filter(p=>p.draft).map(p=>p.id)),hist={};
   Object.keys(S.hist).forEach(id=>{if(!dr.has(id))hist[id]=S.hist[id]});
-  return {v:3,people:S.people.filter(p=>!p.draft),links:S.links,notes:S.notes,hist:hist,mats:S.mats,trailGap:S.trailGap,guide:S.guide,guideC:S.guideC,guideW:S.guideW,showLinks:S.showLinks,showTrail:S.showTrail}}
+  return {v:3,people:S.people.filter(p=>!p.draft),links:S.links,notes:S.notes,hist:hist,mats:S.mats,trailGap:S.trailGap,guide:S.guide,guideC:S.guideC,guideW:S.guideW,guideE:S.guideE,guideO:S.guideO,showLinks:S.showLinks,showTrail:S.showTrail}}
 function persist(){
   try{histNote();localStorage.setItem(KEY,JSON.stringify(snapshot()));if(KEY===KEY_REAL&&!noDirty)markDirty();return true}
   catch(e){if(!warned){warned=true;alert('この環境ではデータを保存できません。設定からバックアップを書き出してください。')}return false}
@@ -441,7 +453,7 @@ function apply(d){
     if(Array.isArray(d.hist[id]))S.hist[id]=d.hist[id].map(h=>({d:String(h.d),e:clamp(h.e),o:clamp(h.o)}));
   });
   S.guide=Array.isArray(d.guide)&&d.guide.length&&d.guide[0].s===0?d.guide:cloneGuide();
-  ['c','w'].forEach(n=>{const g=d[GX[n].k];S[GX[n].k]=Array.isArray(g)&&g.length&&g[0].s===0?g.map(x=>({s:Math.max(0,Math.min(10,Math.round(+x.s)||0)),t:String(x.t||'')})):cloneGX(n)});
+  ['c','w','e','o'].forEach(n=>{const X=GX[n],g=d[X.k];S[X.k]=Array.isArray(g)&&g.length&&g[0].s===X.lo?g.map(x=>({s:Math.max(X.lo,Math.min(X.hi,Math.round(+x.s)||0)),t:String(x.t||'')})):cloneGX(n)});
   S.showLinks=d.showLinks!==false;S.showTrail=d.showTrail!==false;
   ensureHist();
   return true;
@@ -562,6 +574,7 @@ const strength=(a,b)=>S.links[lk(a,b)]||0;
 function tierIndex(v){let k=0;S.guide.forEach((g,i)=>{if(g.s<=v)k=i});return k}
 const tierText=v=>S.guide[tierIndex(v)].t;
 const tierX=(n,v)=>{const a=S[GX[n].k];let k=0;a.forEach((g,i)=>{if(g.s<=v)k=i});return a[k].t};
+const tierAx=tierX;
 // 軌跡: 最後の点から設定した日数(初期値1日)以内の変更は、その点を上書きする
 function recordPos(p){
   const h=S.hist[p.id]=S.hist[p.id]||[],l=h[h.length-1];
@@ -578,10 +591,10 @@ function gxTable(n){
 }
 function helpData(key,v){
   const H={
-   axisE:['横軸：大切にしたい（1〜100）','<p>あなたの<b>気持ち</b>の強さです。損得は考えず、気持ちだけで付けます。</p><table><tr><th>値</th><th>目安</th></tr><tr><td>1</td><td>ほとんど意識しない</td></tr><tr><td>25</td><td>少し気になる</td></tr><tr><td>50</td><td>ふつうに好意がある</td></tr><tr><td>75</td><td>大切にしたい</td></tr><tr><td>100</td><td>何より大切にしたい</td></tr></table><p>マップの右にいるほど大きい値です。点をドラッグするか、詳細のスライダーで変えられます。</p>'],
+   axisE:['横軸：大切にしたい（1〜100）','<p>あなたの<b>気持ち</b>の強さです。損得は考えず、気持ちだけで付けます。</p>'+gxTable('e')+'<p>マップの右にいるほど大きい値です。点をドラッグするか、詳細のスライダーで変えられます。</p>','ge'],
    close:['自分との仲の良さ（1〜10）','<p>あなたとその人が、<b>どれだけ仲が良いか</b>です。マップでは<b>点の大きさと濃さ</b>で表します。大きく濃いほど仲が良い人です。</p>'+gxTable('c')+'<p>「大切にしたい」は気持ちの強さ、「自分との仲の良さ」は関係の近さです。別々に付けます。</p>','gc'],
    want:['仲良くしたい（1〜10）','<p>あなたが、その人と<b>どれくらい仲良くなりたいか</b>の希望です。「自分との仲の良さ」と同じ1〜10で付けます。</p>'+gxTable('w')+'<p>「自分との仲の良さ」と比べて、マップの点にマークが付きます。</p><table><tr><th>マーク</th><th>意味</th></tr><tr><td>赤 ！</td><td>仲良くしたい が 自分との仲の良さ より大きい。希望に届いていないので、もっと関わるべきです。</td></tr><tr><td>緑 ✓</td><td>自分との仲の良さ が 仲良くしたい と同じか、それ以上。希望どおりの関係です。</td></tr></table>','gw'],
-   axisO:['縦軸：大切にすべき（1〜100）','<p>「この縁を活かすべきか」の度合いです。気持ちとは別に付けます。</p><table><tr><th>値</th><th>目安</th></tr><tr><td>1</td><td>活かす理由がほとんどない</td></tr><tr><td>25</td><td>活かせる可能性は低い</td></tr><tr><td>50</td><td>機会があれば活かしたい</td></tr><tr><td>75</td><td>積極的に活かすべき</td></tr><tr><td>100</td><td>必ず活かすべき</td></tr></table><p>詳細の中に、考える材料のチェックがあります。チェックは数値を自動では変えません。材料は設定で増やしたり変えたりできます。</p><table>'+S.mats.map(m=>'<tr><td>□</td><td>'+esc(m.name)+'</td></tr>').join('')+'</table><p>マップの上にいるほど大きい値です。</p>'],
+   axisO:['縦軸：大切にすべき（1〜100）','<p>「この縁を活かすべきか」の度合いです。気持ちとは別に付けます。</p>'+gxTable('o')+'<p>詳細の中に、考える材料のチェックがあります。チェックは数値を自動では変えません。材料は設定で増やしたり変えたりできます。</p><table>'+S.mats.map(m=>'<tr><td>□</td><td>'+esc(m.name)+'</td></tr>').join('')+'</table><p>マップの上にいるほど大きい値です。</p>','go'],
    links:['関係値強度','<p>知り合い同士の関係の強さを、あなたの主観で0〜100の数字にします。強いほど線が太く濃くなります。</p><p>0は「線なし」です。数字を0にすると、つながりを外します。スイッチで、線をマップに出すかどうかを選べます。点を選ぶと、その人の線はオレンジになり、数字が付きます。</p>'],
    trail:['軌跡','<p>大切にしたい・大切にすべきの位置が、<b>1日ごとに1点</b>記録されます。同じ日に何度動かしても、その日の最後の位置が残ります。間隔は設定で、1週間・1か月にも変えられます。</p><p>人を選ぶと、その人の点がいつどこへ動いたかを、矢印と移動した年月日で表示します。選んでいないときは、全員の軌跡を薄く表示します。</p><p>消したい記録をタップすると、その横に「×」が出ます。開始の記録は消せません。点は、詳細の「軌跡」の欄の「×」で1つずつ、「この人の軌跡を消す」でまとめて消せます。消すときは、押したあとにもう一度押して確認します。</p>']
   };
@@ -595,7 +608,7 @@ function helpData(key,v){
 }
 function openHelp(key,v){
   const d=helpData(key,v);
-  $('help-t').textContent=d[0];$('help-b').innerHTML=d[1];$('help-set').classList.toggle('hidden',!d[2]);$('help-set').textContent='目安を変更する';$('help-set').setAttribute('data-acc',d[2]==='gc'?'acc-guide-c':d[2]==='gw'?'acc-guide-w':'acc-guide');
+  $('help-t').textContent=d[0];$('help-b').innerHTML=d[1];$('help-set').classList.toggle('hidden',!d[2]);$('help-set').textContent='目安を変更する';$('help-set').setAttribute('data-acc',typeof d[2]==='string'?'acc-guide-'+d[2].slice(1):'acc-guide');
   $('help').showModal();
 }
 
@@ -799,16 +812,16 @@ function linkRow(p,oid){
    '<input class="lmemo" type="text" maxlength="200" placeholder="この関係のメモ" value="'+esc(S.notes[lk(p.id,oid)]||'')+'" aria-label="この関係のメモ"></div>';
 }
 function tenBlock(label,help,idr,idn,val,tn){
-  return '<div class="ax"><div class="axh">'+label+'<button class="q" data-help="'+help+'" aria-label="説明">?</button>'+
+  return '<div class="ax"><div class="axh">'+label+'<button class="q" data-help="'+help+'" aria-label="説明">?</button><span class="axt" id="'+idr+'t">'+esc(tierX(tn,val))+'</span>'+
    '<input class="big" id="'+idn+'" type="number" min="0" max="10" value="'+val+'" aria-label="'+label+'"></div>'+
-   '<input id="'+idr+'" type="range" min="0" max="10" step="1" value="'+val+'" aria-label="'+label+'"><div class="tier" id="'+idr+'t">'+esc(tierX(tn,val))+'</div></div>';
+   '<input id="'+idr+'" type="range" min="0" max="10" step="1" value="'+val+'" aria-label="'+label+'"></div>';
 }
 const dotR=p=>p.c>0?2.5+p.c/10*6.5:4.5;
 // 仲良くしたい(w)と仲の良さ(c)を比べる。wが未設定なら比べない
 const cmpOf=p=>p.w>0?(p.w>p.c?'bad':'good'):'';
 function cmpHtml(p){const r=cmpOf(p);return r==='bad'?'<div class="hint" style="margin:4px 0 0;color:'+PAL.bad+'">！ もっと関わるべき（仲良くしたい '+p.w+' ＞ 仲の良さ '+p.c+'）</div>':r==='good'?'<div class="hint" style="margin:4px 0 0;color:'+PAL.good+'">✓ 希望どおりの関係（仲の良さ '+p.c+' ≧ 仲良くしたい '+p.w+'）</div>':''}
-function axisBlock(label,help,idr,idn,val){
-  return '<div class="ax"><div class="axh">'+label+'<button class="q" data-help="'+help+'" aria-label="説明">?</button>'+
+function axisBlock(label,help,idr,idn,val,tn){
+  return '<div class="ax"><div class="axh">'+label+'<button class="q" data-help="'+help+'" aria-label="説明">?</button><span class="axt" id="'+idr+'t">'+esc(tierAx(tn,val))+'</span>'+
    '<input class="big" id="'+idn+'" type="number" min="1" max="100" value="'+val+'" aria-label="'+label+'"></div>'+
    '<input id="'+idr+'" type="range" min="1" max="100" value="'+val+'" aria-label="'+label+'"></div>';
 }
@@ -848,7 +861,7 @@ function renderPanel0(){
    '<div class="ph"><span class="dn" id="p-title">'+esc(dn(p))+'</span><button class="xbtn" data-act="close" aria-label="選択を解除">×</button></div>'+
    '<div class="nms"><label class="fl">本名<input id="p-full" value="'+esc(p.full)+'" maxlength="60" placeholder="本名" autocomplete="off"></label>'+
    '<label class="fl">表示名<input id="p-name" value="'+esc(p.name)+'" maxlength="40" placeholder="空欄なら本名" aria-label="表示名（空欄なら本名を表示）" autocomplete="off"></label></div>'+
-   '<div class="axs">'+axisBlock('大切にしたい','axisE','p-e','p-en',p.e)+axisBlock('大切にすべき','axisO','p-o','p-on',p.o)+'</div>'+
+   '<div class="axs">'+axisBlock('大切にしたい','axisE','p-e','p-en',p.e,'e')+axisBlock('大切にすべき','axisO','p-o','p-on',p.o,'o')+'</div>'+
    '<div class="axs">'+tenBlock('自分との仲の良さ','close','p-k','p-kn',p.c,'c')+tenBlock('仲良くしたい','want','p-w','p-wn',p.w,'w')+'</div><div id="p-cmp">'+cmpHtml(p)+'</div>'+
    '<div class="sec" style="padding-top:8px;margin-top:8px">'+
    '<div class="reasons"><div class="rl">考える材料（当てはまるもの）</div>'+
@@ -866,7 +879,7 @@ function fill(el){const mn=+el.min||0,mx=+el.max||100;el.style.setProperty('--p'
 function fillRanges(){document.querySelectorAll('#panel input[type=range]').forEach(fill)}
 function syncPanel(p){
   const set=(id,v)=>{const e=$(id);if(!e)return;if(document.activeElement!==e)e.value=v;if(e.type==='range')fill(e)};
-  set('p-k',p.c);set('p-kn',p.c);set('p-w',p.w);set('p-wn',p.w);{const a=$('p-kt'),b=$('p-wt');if(a)a.textContent=tierX('c',p.c);if(b)b.textContent=tierX('w',p.w)}{const c=$('p-cmp');if(c)c.innerHTML=cmpHtml(p)}set('p-e',p.e);set('p-en',p.e);set('p-o',p.o);set('p-on',p.o);
+  set('p-k',p.c);set('p-kn',p.c);set('p-w',p.w);set('p-wn',p.w);{const a=$('p-kt'),b=$('p-wt');if(a)a.textContent=tierX('c',p.c);if(b)b.textContent=tierX('w',p.w)}{const c=$('p-cmp');if(c)c.innerHTML=cmpHtml(p)}set('p-e',p.e);set('p-en',p.e);set('p-o',p.o);set('p-on',p.o);{const a=$('p-et'),b=$('p-ot');if(a)a.textContent=tierAx('e',p.e);if(b)b.textContent=tierAx('o',p.o)}
 }
 function refreshHist(){const p=byId(S.sel),h=$('p-hist');if(p&&h)h.innerHTML=histLines(p)}
 
@@ -879,17 +892,18 @@ function commitMats(){
   persist();renderSearch();renderPanel();
 }
 function renderGX(n){
-  $(GX[n].rows).innerHTML=S[GX[n].k].map((x,i)=>'<tr><td><input class="gs" type="number" min="0" max="10" value="'+x.s+'"'+(i===0?' disabled':'')+' aria-label="開始値"></td><td><input class="gt" value="'+esc(x.t)+'" aria-label="説明"></td><td>'+(i?'<button class="btn" data-gdelx="'+n+':'+i+'">削除</button>':'')+'</td></tr>').join('');
+  const X=GX[n];
+  $(X.rows).innerHTML=S[X.k].map((x,i)=>'<tr><td><input class="gs" type="number" min="'+X.lo+'" max="'+X.hi+'" value="'+x.s+'"'+(i===0?' disabled':'')+' aria-label="開始値"></td><td><input class="gt" value="'+esc(x.t)+'" aria-label="説明"></td><td>'+(i?'<button class="btn" data-gdelx="'+n+':'+i+'">削除</button>':'')+'</td></tr>').join('');
 }
 function commitGX(n){
-  const rows=[...document.querySelectorAll('#'+GX[n].rows+' tr')].map(tr=>({s:Math.max(0,Math.min(10,parseInt(tr.querySelector('.gs').value,10)||0)),t:tr.querySelector('.gt').value.trim()||'(説明なし)'}));
-  rows[0].s=0;
+  const X=GX[n],rows=[...document.querySelectorAll('#'+X.rows+' tr')].map(tr=>({s:Math.max(X.lo,Math.min(X.hi,parseInt(tr.querySelector('.gs').value,10)||X.lo)),t:tr.querySelector('.gt').value.trim()||'(説明なし)'}));
+  rows[0].s=X.lo;
   const seen={};
   S[GX[n].k]=rows.sort((a,b)=>a.s-b.s).filter(r=>{if(seen[r.s])return false;seen[r.s]=1;return true});
   persist();renderSet();renderPanel();
 }
 function renderSet(){
-  renderMats();renderGX('c');renderGX('w');
+  renderMats();renderGX('c');renderGX('w');renderGX('e');renderGX('o');
   $('trail-gap').value=String(S.trailGap);
   renderSync();renderArc();renderTrash();
   if(typeof showUnmerge==='function')showUnmerge();
@@ -1128,7 +1142,7 @@ $('panel').addEventListener('input',ev=>{
     const r=$(ax==='e'?'p-e':'p-o'),n=$(ax==='e'?'p-en':'p-on');
     if(t!==r)r.value=p[ax];
     if(t!==n)n.value=p[ax];
-    fill(r);
+    fill(r);{const tt=$(r.id+'t');if(tt)tt.textContent=tierAx(ax,p[ax])}
     persist();drawMap();return;
   }
   const row=t.closest('.lrow');
@@ -1159,9 +1173,9 @@ $('set-x').onclick=()=>$('set').close();
 $('set-add').onclick=()=>{const m=Math.max(...S.guide.map(g=>g.s));S.guide.push({s:Math.min(99,m+10),t:'新しい説明'});commitSet()};
 $('set-reset').onclick=()=>{S.guide=cloneGuide();persist();renderSet();renderPanel()};
 $('set-rows').addEventListener('change',commitSet);
-['c','w'].forEach(n=>{
+['c','w','e','o'].forEach(n=>{
   $(GX[n].rows).addEventListener('change',()=>commitGX(n));
-  $('g'+n+'-add').onclick=()=>{const a=S[GX[n].k],m=Math.max(...a.map(g=>g.s));a.push({s:Math.min(10,m+1),t:'新しい説明'});commitGX(n)};
+  $('g'+n+'-add').onclick=()=>{const a=S[GX[n].k],m=Math.max(...a.map(g=>g.s));a.push({s:Math.min(GX[n].hi,m+GX[n].step),t:'新しい説明'});commitGX(n)};
   $('g'+n+'-reset').onclick=()=>{S[GX[n].k]=cloneGX(n);persist();renderSet();renderPanel()};
 });
 $('mat-rows').addEventListener('change',commitMats);
