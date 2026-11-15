@@ -1,6 +1,6 @@
 // オフライン用キャッシュ。ファイルを更新したら VERSION を上げる。
-const VERSION = 'v56';
-const FILES = ['./', './index.html', './manifest.webmanifest',
+const VERSION = 'v57';
+const FILES = ['./', './index.html', './old.html', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png'];
 
 self.addEventListener('install', e => {

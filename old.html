@@ -1,0 +1,1484 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>People Positioning Map</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0b0b0c">
+<meta name="color-scheme" content="dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="People Map">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<style>
+/* 黒を地に、無彩色の濃淡で組む。オレンジは「選んだ人」と主な操作だけに使う。影は使わない。 */
+:root{
+  --bg:#0b0b0c; --raised:#141416; --plot:#0e0e10; --line:#2a2a2e; --grid:#1a1a1d;
+  --strong:#f2f2f3; --ink:#d6d6d9; --muted:#8a8a91; --dot:#6f6f76;
+  --noz:#f26522; --noz-text:#ff8a4c; --noz-soft:#2a1509;
+  --font:"Noto Sans JP","Hiragino Sans","Yu Gothic UI","Meiryo",system-ui,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;background:var(--bg)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:14px;line-height:1.7;letter-spacing:.02em;
+  padding:calc(10px + env(safe-area-inset-top,0px)) max(10px,env(safe-area-inset-right,0px)) calc(32px + env(safe-area-inset-bottom,0px)) max(10px,env(safe-area-inset-left,0px))}
+html,body{overscroll-behavior:none}
+body{touch-action:pan-y pinch-zoom}
+.wrap{max-width:1600px;margin:0 auto}
+button,input,select,textarea{font:inherit;color:inherit;letter-spacing:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--noz);outline-offset:2px}
+.top{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;margin-bottom:8px}
+h1{font-size:15px;margin:0;font-weight:500;letter-spacing:.14em;color:var(--strong)}
+.acts{display:flex;gap:8px;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:none;border-radius:8px;padding:8px 16px;min-height:40px;color:var(--ink);font-size:14px;transition:color 150ms cubic-bezier(.22,1,.36,1),border-color 150ms cubic-bezier(.22,1,.36,1),background-color 150ms cubic-bezier(.22,1,.36,1)}
+.btn:hover{border-color:var(--muted);color:var(--strong)}
+.btn.main{background:var(--noz);color:#1e1f21;border-color:var(--noz);font-weight:500}
+.btn.main:hover{background:#ff7a3d;border-color:#ff7a3d}
+.grid{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:start}
+/* 横に広い画面(パソコン・タブレットの横向き)では、詳細を表の右に出す。未選択でも場所は空けておき、点をつかんだときに表がずれないようにする */
+@media (min-width:900px) and (min-aspect-ratio:5/4){
+  .grid{grid-template-columns:minmax(0,1fr) clamp(340px,30vw,440px)}
+  #panel{position:sticky;top:10px;max-height:calc(100vh - 20px);overflow-y:auto;overscroll-behavior:contain}
+  #panel.hidden{display:block!important;visibility:hidden}
+}
+
+.card{background:var(--raised);border:1px solid var(--line);border-radius:12px}
+.mapcard{padding:12px 12px 8px}
+.tools{display:flex;flex-wrap:wrap;gap:4px 16px;align-items:center;padding:4px 8px 8px}
+.tools .sp{flex:1}
+.tools .lbl{color:var(--muted);font-size:12px;display:inline-flex;align-items:center;gap:6px}
+.sw{display:inline-flex;align-items:center;gap:8px;cursor:pointer;min-height:36px;font-size:14px;color:var(--ink)}
+.sw input{position:absolute;opacity:0;width:1px;height:1px}
+.sw .tr{width:32px;height:18px;border-radius:9px;background:var(--line);position:relative;transition:background .15s;flex:none}
+.sw .tr::after{content:"";position:absolute;left:3px;top:3px;width:12px;height:12px;border-radius:50%;background:var(--muted);transition:transform .15s,background .15s}
+.sw input:checked + .tr{background:#6b6b72}
+.sw input:checked + .tr::after{transform:translateX(14px);background:var(--strong)}
+.sw input:focus-visible + .tr{outline:2px solid var(--noz);outline-offset:2px}
+.q{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;border:1px solid var(--line);color:var(--muted);background:none;font-size:12px;font-weight:500;line-height:1;padding:0;flex:none}
+.q:hover{border-color:var(--muted);color:var(--strong)}
+.mapwrap{display:grid;grid-template-columns:auto minmax(0,1fr) 64px;column-gap:6px;align-items:stretch}
+.mapwrap #map{min-width:0}
+.axl{color:var(--muted);font-size:12px;display:inline-flex;align-items:center;gap:6px}
+.ylab{writing-mode:vertical-rl;display:flex;align-items:center;justify-content:center;padding:0 2px 20px 0}
+.ylab .q{writing-mode:horizontal-tb}
+.xlab{display:flex;justify-content:center;padding:0 0 2px 0}
+.tg{display:flex;flex-wrap:wrap;gap:4px 16px;align-items:center}
+.tg .lbl{color:var(--muted);font-size:12px;display:inline-flex;align-items:center;gap:6px}
+#wheel{width:64px;min-height:180px;flex:none;position:relative;cursor:ns-resize;touch-action:none;user-select:none;-webkit-user-select:none}
+#wheel svg{position:absolute;left:0;top:0;width:100%;height:100%;display:block}
+#wheel:focus-visible{outline:1px solid var(--muted);outline-offset:2px}
+.qs{font-size:12px;color:var(--ink)}
+#map{user-select:none;-webkit-user-select:none}
+#map svg{display:block;width:100%;height:auto}
+.hint{font-size:12px;color:var(--muted);margin:4px 8px 8px}
+.panel{padding:16px;--raised:#1b1b1d;--plot:#262628;--line:#38383c;--muted:#a8a8ae;--ink:#e8e8ea;border-color:#38383c}
+.ax .axt{flex:1;min-width:0;font-size:12px;font-weight:400;line-height:1.25;color:var(--muted);white-space:normal}
+.info{list-style:none;margin:0 0 8px;padding:0}
+.info li{display:flex;align-items:center;gap:6px;padding:2px 0}
+.info li::before{content:"・";color:var(--muted);flex:none}
+.info .irow{flex:1;min-width:0;background:var(--plot);border:1px solid var(--line);border-radius:8px;color:var(--ink);font-size:14px;padding:8px 12px;min-height:40px}
+.info .irow:focus{outline:none;border-color:var(--noz)}
+.info .idate{flex:none;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.empty{color:var(--muted);padding:4px 0;font-size:14px}
+.empty .acts{margin-top:12px}
+.undo{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.undo .btn{flex:none}
+.ph{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.ph input{flex:1;min-width:0;font-size:20px;font-weight:500;color:var(--strong);letter-spacing:.06em;border:0;border-bottom:1px solid transparent;background:none;border-radius:0;padding:2px 0}
+.ph input{border-bottom-color:var(--line)}
+.ph input:focus{outline:none}
+.fl{display:block;font-size:12px;color:var(--muted);margin:-4px 0 16px}
+.fl input{display:block;width:100%;margin-top:2px;background:none;border:0;border-bottom:1px solid var(--line);color:var(--ink);font-size:14px;padding:3px 0}
+.fl input:focus{outline:none;border-bottom-color:var(--noz)}
+.lmemo{width:100%;margin-top:2px;background:var(--plot);border:1px solid var(--line);border-radius:8px;color:var(--ink);font-size:13px;padding:5px 10px}
+.lmemo:focus{outline:none;border-color:var(--noz)}
+.hist li:first-child time{color:var(--strong)}
+.xbtn{border:0;background:none;font-size:22px;line-height:1;padding:6px 8px;color:var(--muted)}
+.xbtn:hover{color:var(--strong)}
+.sec{border-top:1px solid var(--line);padding-top:10px;margin-top:12px}
+.nms{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:8px 16px;margin:4px 0 12px}
+.nms .fl{margin:0}
+.axs{display:grid;grid-template-columns:repeat(auto-fit,minmax(188px,1fr));gap:8px 16px;margin-top:-4px}
+.ax{min-width:0}
+.ax .axh{display:flex;align-items:center;gap:8px;margin-bottom:0;font-size:14px;color:var(--ink);white-space:nowrap}
+.ax .axh .big{margin-left:auto}
+.big{width:2.4em;text-align:right;font-size:20px;font-weight:400;color:var(--strong);background:none;border:0;border-bottom:1px solid transparent;padding:0;font-variant-numeric:tabular-nums;-moz-appearance:textfield}
+.big:hover,.big:focus{border-bottom-color:var(--noz);outline:none}
+.big::-webkit-outer-spin-button,.big::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+input[type=range]{-webkit-appearance:none;appearance:none;background:none;width:100%;height:28px;margin:0;touch-action:pan-y}
+input[type=range]::-webkit-slider-runnable-track{height:2px;background:linear-gradient(to right,var(--ink) var(--p,0%),var(--line) var(--p,0%))}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--strong);border:0;margin-top:-8px}
+input[type=range]::-moz-range-track{height:2px;background:var(--line)}
+input[type=range]::-moz-range-progress{height:2px;background:var(--ink)}
+input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--strong);border:0}
+.reasons{margin-top:6px}
+.reasons .rl{font-size:12px;color:var(--muted);margin-bottom:2px}
+.chk{display:flex;align-items:center;gap:12px;min-height:36px;font-size:14px}
+.chk input{width:18px;height:18px;accent-color:var(--ink);margin:0}
+.sh{font-size:14px;color:var(--ink);margin:0 0 4px;display:flex;align-items:center;gap:8px;font-weight:500}
+textarea:focus{outline:none;border-color:var(--noz)}
+textarea{width:100%;min-height:72px;border:1px solid var(--line);background:var(--plot);border-radius:8px;padding:8px 12px;font-size:14px;resize:vertical}
+.lrow{padding:6px 0;border-top:1px solid var(--line)}
+.lrow:first-of-type{border-top:0}
+.lrow .l1{display:flex;align-items:center;gap:8px}
+.lrow .nm{border:0;background:none;font-weight:500;padding:2px 0;text-align:left;flex:0 1 auto;min-width:0;max-width:45%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--strong)}
+.lrow .nm:hover{color:var(--strong);text-decoration:underline;text-underline-offset:3px}
+.lrow .snum{width:3.2em;text-align:right;font-size:16px;font-weight:400;color:var(--strong);background:none;border:0;border-bottom:1px solid transparent;font-variant-numeric:tabular-nums;-moz-appearance:textfield}
+.lrow .snum:hover,.lrow .snum:focus{border-bottom-color:var(--noz);outline:none}
+.lrow .snum::-webkit-outer-spin-button,.lrow .snum::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.lrow .tier{font-size:12px;color:var(--muted);flex:1;min-width:0;line-height:1.3}
+.addrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:2px solid var(--line)}
+.addrow .al{flex:0 0 100%;font-size:12px;font-weight:600;color:var(--muted)}
+.addrow select{flex:1;min-width:0;border:1px solid var(--line);background:var(--plot);border-radius:8px;padding:8px 12px;min-height:40px}
+.hist{list-style:none;margin:0;padding:0;font-size:12px}
+.hist li{display:flex;gap:12px;padding:4px 0;color:var(--ink)}
+.hist time{color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.del{border:1px solid var(--line);background:none;border-radius:8px;color:var(--ink);font-size:13px;padding:6px 14px;min-height:36px;margin-top:8px}
+.del + .del{margin-left:8px}
+.del:hover{border-color:var(--muted);color:var(--strong)}
+dialog{border:1px solid var(--line);border-radius:14px;background:var(--raised);color:var(--ink);padding:0;width:min(540px,calc(100vw - 24px));max-height:calc(100% - 24px)}
+dialog::backdrop{background:rgba(0,0,0,.65)}
+.dlg{padding:18px}
+.dlg h2{font-size:15px;margin:0 0 10px;color:var(--strong);font-weight:500;letter-spacing:.08em}
+.dlg h3{font-size:14px;margin:20px 0 8px;color:var(--strong);font-weight:500}
+.dlg p{margin:0 0 12px;font-size:14px}
+.dlg table{width:100%;border-collapse:collapse;font-size:14px;margin-bottom:12px}
+.dlg td,.dlg th{padding:6px 8px;border-top:1px solid var(--line);text-align:left;vertical-align:top}
+.dlg th{font-size:12px;color:var(--muted);font-weight:400}
+.dlg tr.now td{background:var(--noz-soft);color:var(--strong);font-weight:500}
+.dlg .acts{justify-content:flex-end;margin-top:10px}
+.dlg .acts.l{justify-content:flex-start}
+.gs{width:4em;border:1px solid var(--line);background:var(--plot);border-radius:8px;padding:4px 6px;text-align:right}
+.gt{width:100%;border:1px solid var(--line);background:var(--plot);border-radius:8px;padding:4px 8px}
+.stl{max-height:40vh;overflow:auto}
+.search{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:0 6px 8px}
+.search input[type=search]{flex:1 1 180px;min-width:0;background:var(--plot);border:1px solid var(--line);border-radius:8px;color:var(--ink);padding:8px 12px;font-size:14px;min-height:40px}
+.search input[type=search]:focus{outline:none;border-color:var(--noz)}
+.lbl2{color:var(--muted);font-size:12px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:none;border-radius:999px;padding:3px 12px;font-size:12px;color:var(--ink);min-height:30px}
+.chip:hover{border-color:var(--muted)}
+.chip[aria-pressed="true"]{border-color:var(--noz);color:var(--noz-text);background:var(--noz-soft)}
+.seg{display:inline-flex}
+.seg button{border:1px solid var(--line);background:none;padding:3px 10px;font-size:12px;color:var(--muted);min-height:30px}
+.seg button:first-child{border-radius:8px 0 0 8px}
+.seg button:last-child{border-radius:0 8px 8px 0;border-left:0}
+.seg button[aria-pressed="true"]{color:var(--strong);background:var(--line)}
+.found{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:0 6px 8px}
+.found:empty{display:none}
+.found .fc{font-size:12px;color:var(--ink);margin-right:4px}
+.chk{justify-content:space-between}
+.chk label{display:flex;align-items:center;gap:10px;flex:1;min-height:36px;cursor:pointer}
+.hist li{align-items:center}
+.hx{margin-left:auto;border:0;background:none;color:var(--muted);font-size:16px;line-height:1;padding:2px 8px}
+.hx:hover{color:var(--strong)}
+.hist li .hx{display:none}
+.hist li.open .hx{display:inline-flex}
+.hist li.tap{cursor:pointer}
+.hist li.open{background:var(--plot);border-radius:8px}
+.arow{display:flex;gap:8px;align-items:center;border-top:1px solid var(--line);padding:10px 0}
+.arow .ai{flex:1;min-width:0}
+.arow .am{font-size:12px;color:var(--muted)}
+.search input[type=date]{background:var(--plot);border:1px solid var(--line);border-radius:8px;color:var(--ink);padding:8px 12px;font-size:14px;min-height:40px;color-scheme:dark}
+.search input[type=date]:focus{outline:none;border-color:var(--noz)}
+.dv{display:flex;justify-content:space-between;align-items:baseline;padding:4px 0;font-size:14px}
+.dv b{font-size:20px;font-weight:400;color:var(--strong)}
+.dn{flex:1;font-size:20px;font-weight:500;color:var(--strong);letter-spacing:.06em}
+.dlg ul{margin:0 0 8px;padding-left:1.2em;font-size:14px}
+.dlg li{margin-bottom:4px}
+.btn.ic{width:40px;padding:0;display:inline-flex;align-items:center;justify-content:center;position:relative;color:var(--muted)}
+.btn.ic:hover{color:var(--strong)}
+.btn.ic .bd{position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;border-radius:9px;background:var(--noz);color:#1e1f21;font-size:12px;font-weight:500;line-height:18px;text-align:center;padding:0 4px}
+.acc{border-top:1px solid var(--line)}
+.acc:last-of-type{border-bottom:1px solid var(--line)}
+.acc>summary{list-style:none;cursor:pointer;min-height:44px;display:flex;align-items:center;justify-content:space-between;font-size:14px;color:var(--strong);font-weight:500}
+.acc>summary::-webkit-details-marker{display:none}
+.acc>summary::after{content:"＋";color:var(--muted);font-weight:400}
+.acc[open]>summary::after{content:"－";color:var(--ink)}
+.acc>.accb{padding:0 0 12px}
+/* 狭い画面: ボタンの列を1段に収める */
+@media (max-width:480px){
+  .top .acts{gap:6px}
+  .btn.ic{width:34px}
+  .top .btn.main{padding:8px 12px}
+}
+.menuwrap{position:relative}
+.menu{position:absolute;right:0;top:calc(100% + 6px);min-width:190px;background:var(--raised);border:1px solid var(--line);border-radius:12px;padding:6px;z-index:40;box-shadow:0 8px 24px rgba(0,0,0,.45)}
+.mi{display:flex;align-items:center;gap:10px;width:100%;border:0;background:none;color:var(--ink);font-size:14px;padding:8px 12px;border-radius:8px;min-height:40px;text-align:left}
+.mi:hover{background:var(--line);color:var(--strong)}
+.mi svg{flex:none;color:var(--muted)}
+.btn:disabled{opacity:.35;cursor:default}
+.btn:disabled:hover{border-color:var(--line);color:var(--ink)}
+.vbar{padding:0 0 10px}
+.vbar .seg{display:flex;width:100%}
+.vbar .seg button{flex:1;font-size:13px;padding:4px 8px}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="mbar" class="hidden" style="font-size:12px;color:var(--muted);margin-bottom:8px">サンプルを表示中（あなたのデータは保存されています）</div>
+  <div class="top">
+    <div class="tg">
+      <span class="lbl"><label class="sw"><input type="checkbox" id="t-links" checked><span class="tr"></span>関係値強度</label><button class="q" data-help="links" aria-label="関係値強度の説明">?</button></span>
+      <span class="lbl"><label class="sw"><input type="checkbox" id="t-trail" checked><span class="tr"></span>軌跡</label><button class="q" data-help="trail" aria-label="軌跡の説明">?</button></span>
+    </div>
+    <div class="acts">
+      <button class="btn ic" id="b-undo" title="ひとつ戻る" aria-label="ひとつ戻る" disabled><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14L4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3"/></svg></button>
+      <button class="btn ic" id="b-redo" title="ひとつ進む" aria-label="ひとつ進む" disabled><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 14l5-5-5-5M20 9H10a6 6 0 0 0 0 12h3"/></svg></button>
+      <button class="btn main" id="b-add">＋ 人を追加</button>
+      <div class="menuwrap">
+        <button class="btn ic" id="b-menu" title="メニュー" aria-label="メニュー" aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+        <div class="menu hidden" id="menu" role="menu">
+        <button class="mi" id="b-home" role="menuitem"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11l8-7 8 7M6 10v10h12V10M10 20v-6h4v6"/></svg><span>ホーム</span></button>
+        <button class="mi" id="b-q" role="menuitem"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg><span>検索</span></button>
+        <button class="mi" id="b-save" role="menuitem"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h11l3 3v13H5zM8 4v5h7V4M8 20v-6h8v6"/></svg><span>保存</span></button>
+        <button class="mi" id="b-png" role="menuitem"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg><span>画像を保存</span></button>
+        <button class="mi" id="b-help" role="menuitem"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7M12 17v.01"/></svg><span>使い方</span></button>
+        <button class="mi" id="b-set" role="menuitem"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span>設定</span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <section class="card mapcard">
+      <div class="vbar"><span class="seg" id="v-seg"><button data-view="pos" aria-pressed="true">大切にしたい×大切にすべき</button><button data-view="cw" aria-pressed="false">仲の良さ×仲良くしたい</button></span></div>
+      <div class="search hidden" id="drow">
+        <label class="lbl2" for="q-date">日付で見る</label>
+        <input id="q-date" type="date" aria-label="この日付のマップを見る"><span class="qs" id="q-state"></span>
+        <button class="btn hidden" id="q-now">現在に戻す</button>
+      </div>
+      <div id="sbox" class="hidden">
+      <div class="search">
+        <input id="q-text" type="search" placeholder="名前で検索（メモ・材料も対象）" autocomplete="off" aria-label="検索">
+        <button class="btn hidden" id="q-clear">解除</button>
+      </div>
+      <div class="search" style="padding-top:0"><span class="lbl2">材料で絞る</span><div class="chips" id="q-chips"></div>
+        <span class="seg hidden" id="q-mode"><button data-qmode="all">すべて</button><button data-qmode="any">どれか</button></span></div>
+      <div class="found" id="q-found"></div>
+      </div>
+      <div class="mapwrap"><div class="ylab"><span class="axl" id="ax-y">縦 大切にすべき<button class="q" data-help="axisO" aria-label="縦軸の説明">?</button></span></div><div id="map"></div><div id="wheel" tabindex="0" role="slider" aria-orientation="vertical" aria-label="日付ホイール（下へ回すと過去へ）" title="下へ回すと過去へ、上へ回すと現在へ"></div><div></div><div class="xlab"><span class="axl" id="ax-x">横 大切にしたい<button class="q" data-help="axisE" aria-label="横軸の説明">?</button></span></div><div></div></div>
+    </section>
+    <aside class="card panel" id="panel" aria-live="polite"></aside>
+  </div>
+</div>
+
+<dialog id="help"><div class="dlg">
+  <h2 id="help-t"></h2>
+  <div id="help-b"></div>
+  <div class="acts"><button class="btn hidden" id="help-set">目安を変更する</button><button class="btn main" id="help-x">閉じる</button></div>
+</div></dialog>
+
+<dialog id="about"><div class="dlg">
+  <h2>使い方</h2>
+  <p>項目を押すと開きます。</p>
+<details class="acc"><summary>このアプリについて</summary><div class="accb">
+  <ul>
+    <li>知り合いを「大切にしたい」（横）と「大切にすべき」（縦）の2つの軸（どちらも1〜100）で整理します。目的は、自分の気持ちの整理です。</li>
+    <li>点をドラッグすると位置を動かせます。点を押すと、詳細が開きます。</li>
+  </ul>
+  </div></details>
+<details class="acc"><summary>関係値強度と考える材料</summary><div class="accb">
+  <ul>
+    <li>関係値強度は、知り合い同士の関係の強さを0〜100で付けたものです。線の太さと濃さに出ます。目安は設定で変えられます。</li>
+    <li>考える材料は「大切にすべき」を考えるためのチェックです。数値は自動では変わりません。材料は設定で増減できます。</li>
+  </ul>
+  </div></details>
+<details class="acc"><summary>軌跡と日付で見る</summary><div class="accb">
+  <ul>
+    <li>軌跡は<b>1日ごとに1点</b>です。同じ日に何度動かしても、その日の最後の位置が残ります。間隔は設定で変えられます。</li>
+    <li>軌跡の点を消すときは、押したあとにもう一度押して確認します。</li>
+    <li>「日付で見る」で日付を選ぶと、その日の位置のマップを見られます（閲覧のみ）。関係値強度の線、メモ、材料は現在の値です。</li>
+  </ul>
+  </div></details>
+<details class="acc"><summary>アーカイブ</summary><div class="accb">
+  <ul>
+    <li>関係がなくなった人は削除せず、アーカイブします。マップや検索には出なくなりますが、画面上部の「アーカイブ」からいつでも戻せます。</li>
+  </ul>
+  </div></details>
+<details class="acc"><summary>データ</summary><div class="accb">
+  <ul>
+    <li>データは、この端末のブラウザの中だけに保存されます。外部へは送りません。</li>
+    <li>端末の故障や、ブラウザのデータ削除に備えて、設定から定期的にバックアップを書き出してください。</li>
+  </ul>
+  </div></details>
+<div class="acts"><button class="btn main" id="about-x">閉じる</button></div>
+</div></dialog>
+
+<dialog id="set"><div class="dlg">
+  <h2>設定</h2>
+  <p>項目を押すと開きます。</p>
+  <details class="acc" id="acc-guide"><summary>関係値強度の目安</summary><div class="accb">
+  <p>「?」を押したときに出る説明です。左の数字からその段階が始まります。</p>
+  <div class="stl"><table><thead><tr><th>から</th><th>説明</th><th></th></tr></thead><tbody id="set-rows"></tbody></table></div>
+  <div class="acts l"><button class="btn" id="set-add">段階を追加</button><button class="btn" id="set-reset">初期値に戻す</button></div>
+  </div></details>
+  <details class="acc" id="acc-guide-e"><summary>大切にしたいの目安</summary><div class="accb">
+  <p>「?」と、詳細の数字の横に出る説明です。左の数字からその段階が始まります。</p>
+  <div class="stl"><table><thead><tr><th>から</th><th>説明</th><th></th></tr></thead><tbody id="ge-rows"></tbody></table></div>
+  <div class="acts l"><button class="btn" id="ge-add">段階を追加</button><button class="btn" id="ge-reset">初期値に戻す</button></div>
+  </div></details>
+  <details class="acc" id="acc-guide-o"><summary>大切にすべきの目安</summary><div class="accb">
+  <p>「?」と、詳細の数字の横に出る説明です。左の数字からその段階が始まります。</p>
+  <div class="stl"><table><thead><tr><th>から</th><th>説明</th><th></th></tr></thead><tbody id="go-rows"></tbody></table></div>
+  <div class="acts l"><button class="btn" id="go-add">段階を追加</button><button class="btn" id="go-reset">初期値に戻す</button></div>
+  </div></details>
+  <details class="acc" id="acc-guide-c"><summary>自分との仲の良さの目安</summary><div class="accb">
+  <p>「?」と、詳細のスライダーの下に出る説明です。左の数字からその段階が始まります。</p>
+  <div class="stl"><table><thead><tr><th>から</th><th>説明</th><th></th></tr></thead><tbody id="gc-rows"></tbody></table></div>
+  <div class="acts l"><button class="btn" id="gc-add">段階を追加</button><button class="btn" id="gc-reset">初期値に戻す</button></div>
+  </div></details>
+  <details class="acc" id="acc-guide-w"><summary>仲良くしたいの目安</summary><div class="accb">
+  <p>「?」と、詳細のスライダーの下に出る説明です。左の数字からその段階が始まります。</p>
+  <div class="stl"><table><thead><tr><th>から</th><th>説明</th><th></th></tr></thead><tbody id="gw-rows"></tbody></table></div>
+  <div class="acts l"><button class="btn" id="gw-add">段階を追加</button><button class="btn" id="gw-reset">初期値に戻す</button></div>
+  </div></details>
+  <details class="acc" id="acc-mats"><summary>考える材料</summary><div class="accb">
+  <p>「大切にすべき」で考える材料です。増やしたり、名前を変えたりできます。</p>
+  <div class="stl"><table><thead><tr><th>材料</th><th></th></tr></thead><tbody id="mat-rows"></tbody></table></div>
+  <div class="acts l"><button class="btn" id="mat-add">材料を追加</button></div>
+  </div></details>
+  <details class="acc"><summary>軌跡</summary><div class="accb">
+  <p>軌跡は、初期設定では<b>1日ごとに1点</b>です。同じ日に何度動かしても、その日の最後の位置が残ります。間隔を変えるときは下で選びます。点を消すときは、必ず確認が出ます。</p>
+  <div class="acts l"><select id="trail-gap" class="gt" style="width:auto" aria-label="記録の間隔"><option value="1">1日</option><option value="7">1週間</option><option value="30">1か月</option></select><button class="btn" id="s-trail">全員の軌跡を消す</button></div>
+  </div></details>
+  <details class="acc"><summary>データのバックアップ・削除</summary><div class="accb"><p>データはこの端末の中だけに保存されています。</p>
+  <p>バックアップは、人・つながり・軌跡・目安をまとめた1つのファイルです。</p>
+  <p>「追加で読み込む」は、今のデータを残して、新しい人とつながりだけを足します。名前が同じ人は、1人にまとめます。「置き換えて読み込む」は、今のデータを全て入れ替えます。</p>
+  <div class="acts l">
+    <button class="btn" id="s-export">バックアップを書き出す</button>
+    <button class="btn" id="s-merge">追加で読み込む</button>
+    <button class="btn" id="s-import">置き換えて読み込む</button>
+    <button class="btn" id="s-wipe">全データを削除</button>
+    <input type="file" id="s-file" accept=".json,application/json" class="hidden">
+    <input type="file" id="s-mfile" accept=".json,application/json" class="hidden">
+  </div>
+  <p id="s-msg" style="font-size:12px;color:var(--muted);margin-top:8px"></p>
+  <div class="acts l"><button class="btn hidden" id="s-unmerge">追加で読み込む前の状態に戻す</button></div></div></details>
+  <details class="acc" id="acc-arc"><summary>アーカイブ保管庫<span id="arc-n" style="color:var(--muted);margin-left:6px"></span></summary><div class="accb">
+  <p>関係がなくなった人です。マップ・検索・つながりの一覧には出ません。データは残り、いつでも戻せます。</p>
+  <div id="arc-list"></div>
+  </div></details>
+  <details class="acc" id="acc-trash"><summary>ゴミ箱<span id="trash-n" style="color:var(--muted);margin-left:6px"></span></summary><div class="accb">
+  <p>削除した人です。マップ・検索・つながりの一覧には出ません。<b>自動では消えません。</b>「完全に削除」を押したときだけ、消えます。</p>
+  <div id="trash-list"></div>
+  <div class="acts l"><button class="btn" id="trash-empty">ゴミ箱を空にする</button></div>
+  </div></details>
+  <details class="acc" id="acc-sync"><summary>端末間の同期</summary><div class="accb"><div id="sync-box"></div></div></details>
+  <details class="acc"><summary>メンテナンスモード</summary><div class="accb">
+  <p>オンにすると、サンプルのデータに切り替わります。動作の確認用です。あなたのデータは消えず、オフにすると元に戻ります。</p>
+  <label class="sw"><input type="checkbox" id="s-maint"><span class="tr"></span>メンテナンスモード</label>
+  <div class="acts l"><button class="btn hidden" id="s-sample">サンプルを最初の状態に戻す</button></div>
+  </div></details>
+  <div class="acts"><button class="btn main" id="set-x">閉じる</button></div>
+</div></dialog>
+
+<script>
+(function(){
+'use strict';
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad=n=>String(n).padStart(2,'0');
+const ymd=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const today=()=>ymd(new Date());
+const fmtD=d=>d.replace(/-/g,'/');
+const fmtJP=d=>d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日 '+pad(d.getHours())+':'+pad(d.getMinutes())+' 時点';
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const clamp=v=>Math.min(100,Math.max(1,Math.round(v)||1));
+
+const DEF_MATS=[
+ {id:'m1',name:'イベントに誘える'},
+ {id:'m2',name:'仕事の可能性がある'},
+ {id:'m3',name:'人を紹介してくれそう'},
+ {id:'m4',name:'情報や知識をくれる'}];
+const cloneMats=()=>DEF_MATS.map(m=>Object.assign({},m));
+const DEF_GUIDE=[
+ {s:0,t:'知らない'},{s:1,t:'名前を知っている'},{s:11,t:'Instagramなどでつながっている'},
+ {s:21,t:'会話をしたことがある'},{s:31,t:'何度か会話したことがある'},{s:41,t:'個別にやりとりしたことがある'},
+ {s:51,t:'二人など少人数で会ったことがある'},{s:61,t:'何度か会ったことがある'},{s:71,t:'悩みや本音を話せる'},
+ {s:81,t:'困ったときに頼れる'},{s:91,t:'親友'},{s:100,t:'家族レベル'}];
+const cloneGuide=()=>DEF_GUIDE.map(g=>Object.assign({},g));
+// 自分との仲の良さ(c)・仲良くしたい(w)の目安。1段階ずつ、設定で書き換えられる
+const DEF_GC=[{s:0,t:'未設定'},{s:1,t:'顔と名前を知っている'},{s:2,t:'あいさつを交わす'},{s:3,t:'世間話ができる'},{s:4,t:'何度か話したことがある'},{s:5,t:'気軽に連絡できる'},{s:6,t:'二人で会ったことがある'},{s:7,t:'悩みや本音を話せる'},{s:8,t:'よく会う・何でも相談できる'},{s:9,t:'困ったときに頼り合える'},{s:10,t:'家族のように親しい'}];
+const DEF_GW=[{s:0,t:'未設定'},{s:1,t:'今のままでよい'},{s:2,t:'機会があれば話したい'},{s:3,t:'ときどき連絡を取りたい'},{s:4,t:'気軽に話せる関係になりたい'},{s:5,t:'定期的に会いたい'},{s:6,t:'一緒に何かをしてみたい'},{s:7,t:'本音で話せる関係になりたい'},{s:8,t:'長く付き合っていきたい'},{s:9,t:'人生で大切な関係にしたい'},{s:10,t:'何でも話せる親友・家族のようになりたい'}];
+const DEF_GE=[{s:1,t:'ほとんど意識しない'},{s:25,t:'少し気になる'},{s:50,t:'ふつうに好意がある'},{s:75,t:'大切にしたい'},{s:100,t:'何より大切にしたい'}];
+const DEF_GO=[{s:1,t:'活かす理由がほとんどない'},{s:25,t:'活かせる可能性は低い'},{s:50,t:'機会があれば活かしたい'},{s:75,t:'積極的に活かすべき'},{s:100,t:'必ず活かすべき'}];
+const GX={c:{k:'guideC',def:DEF_GC,rows:'gc-rows',lo:0,hi:10,step:1},w:{k:'guideW',def:DEF_GW,rows:'gw-rows',lo:0,hi:10,step:1},e:{k:'guideE',def:DEF_GE,rows:'ge-rows',lo:1,hi:100,step:10},o:{k:'guideO',def:DEF_GO,rows:'go-rows',lo:1,hi:100,step:10}};
+const cloneGX=n=>GX[n].def.map(g=>Object.assign({},g));
+
+/* ---------- 保存(データの出入りはここだけ。後でSupabaseに差し替える) ---------- */
+const KEY_REAL='positioning-map.v3',KEY_SAMPLE='positioning-map.sample',KEY_OLD='positioning-map.v2';
+let KEY=KEY_REAL;
+let SB=null,SUSER=null,syncTimer=null,noDirty=false;
+const S={people:[],links:{},notes:{},hist:{},mats:cloneMats(),trailGap:1,asOf:'',qtext:'',qmats:[],qmode:'all',guide:cloneGuide(),guideC:cloneGX('c'),guideW:cloneGX('w'),guideE:cloneGX('e'),guideO:cloneGX('o'),showLinks:true,showTrail:true,sel:null};
+let warned=false,LAST='',LASTUNDO='';
+function snapshot(){
+  const dr=new Set(S.people.filter(p=>p.draft).map(p=>p.id)),hist={};
+  Object.keys(S.hist).forEach(id=>{if(!dr.has(id))hist[id]=S.hist[id]});
+  return {v:3,people:S.people.filter(p=>!p.draft),links:S.links,notes:S.notes,hist:hist,mats:S.mats,trailGap:S.trailGap,guide:S.guide,guideC:S.guideC,guideW:S.guideW,guideE:S.guideE,guideO:S.guideO,showLinks:S.showLinks,showTrail:S.showTrail}}
+function persist(){
+  try{histNote();localStorage.setItem(KEY,JSON.stringify(snapshot()));if(KEY===KEY_REAL&&!noDirty)markDirty();return true}
+  catch(e){if(!warned){warned=true;alert('この環境ではデータを保存できません。設定からバックアップを書き出してください。')}return false}
+}
+/* ---------- 戻る・進む(直近の操作。1秒以内の続けた変更は1回にまとめる) ---------- */
+const HIST={u:[],r:[],cur:null,t:0};
+function histUi(){const u=$('b-undo'),r=$('b-redo');if(u)u.disabled=!HIST.u.length;if(r)r.disabled=!HIST.r.length}
+function histReset(){HIST.u=[];HIST.r=[];HIST.cur=JSON.stringify(snapshot());HIST.t=0;histUi()}
+function histNote(){
+  const now=JSON.stringify(snapshot());
+  if(HIST.cur===null){HIST.cur=now;return}
+  if(now===HIST.cur)return;
+  if(!HIST.u.length||Date.now()-HIST.t>1000){HIST.u.push(HIST.cur);if(HIST.u.length>60)HIST.u.shift()}
+  HIST.t=Date.now();HIST.cur=now;HIST.r=[];histUi();
+}
+// 保存データの1人分を、アプリ内の形に直す
+function normPerson(p){
+  const mat={};
+  if(p.mat&&typeof p.mat==='object')Object.keys(p.mat).forEach(id=>{if(p.mat[id])mat[id]=1});
+  else if(Array.isArray(p.opp))p.opp.forEach((v,i)=>{if(v&&DEF_MATS[i])mat[DEF_MATS[i].id]=1});
+  return {id:String(p.id),name:String(p.name||''),full:String(p.full||''),info:Array.isArray(p.info)?p.info.slice(0,100).map(x=>(x&&typeof x==='object')?{t:String(x.t||''),d:String(x.d||'')}:{t:String(x),d:''}):[],e:clamp(p.e),o:clamp(p.o),c:(v=>Math.max(0,Math.min(10,v>10?Math.round(v/10):v)))(Math.round(+p.c)||0),w:Math.max(0,Math.min(10,Math.round(+p.w)||0)),mat,memo:String(p.memo||''),arch:!!p.arch,archAt:String(p.archAt||''),trash:!!p.trash,trashAt:String(p.trashAt||'')};
+}
+function apply(d){
+  if(!d||!Array.isArray(d.people))return false;
+  S.mats=Array.isArray(d.mats)&&d.mats.length?d.mats.map(m=>({id:String(m.id),name:String(m.name||'材料')})):cloneMats();
+  S.people=d.people.map(normPerson);
+  S.links=d.links&&typeof d.links==='object'?d.links:{};
+  S.notes=d.notes&&typeof d.notes==='object'?d.notes:{};
+  S.trailGap=[1,7,30].includes(+d.trailGap)?+d.trailGap:1;
+  S.hist={};
+  if(d.hist&&typeof d.hist==='object')Object.keys(d.hist).forEach(id=>{
+    if(Array.isArray(d.hist[id]))S.hist[id]=d.hist[id].map(h=>({d:String(h.d),e:clamp(h.e),o:clamp(h.o)}));
+  });
+  S.guide=Array.isArray(d.guide)&&d.guide.length&&d.guide[0].s===0?d.guide:cloneGuide();
+  ['c','w','e','o'].forEach(n=>{const X=GX[n],g=d[X.k];S[X.k]=Array.isArray(g)&&g.length&&g[0].s===X.lo?g.map(x=>({s:Math.max(X.lo,Math.min(X.hi,Math.round(+x.s)||0)),t:String(x.t||'')})):cloneGX(n)});
+  S.showLinks=d.showLinks!==false;S.showTrail=d.showTrail!==false;
+  ensureHist();
+  return true;
+}
+const nkey=t=>String(t||'').replace(/[\s\u3000]+/g,'').toLowerCase();
+const MERGE_BAK='positioning-map.before-merge';
+function mergeIn(d){
+  if(!d||!Array.isArray(d.people))return null;
+  const inc=d.people.map(p=>Object.assign(normPerson(p),{linkOnly:!!p.linkOnly,aliases:(Array.isArray(p.aliases)?p.aliases:[]).map(String)}));
+  // 材料は、名前が同じものに合わせる。使う人がいて、今のアプリにない材料だけを足す
+  const matName={};
+  (Array.isArray(d.mats)?d.mats:[]).forEach(m=>{matName[String(m.id)]=String(m.name||'材料')});
+  const mapMat=k=>{
+    const nm=matName[k];
+    if(!nm)return S.mats.some(x=>x.id===k)?k:null;
+    const ex=S.mats.find(x=>x.name===nm);if(ex)return ex.id;
+    const id='m'+uid();S.mats.push({id,name:nm});return id;
+  };
+  const idMap={},st={added:0,merged:0,links:0,skipped:[],skippedLinks:0};
+  inc.forEach(p=>{
+    const keys=[p.name,p.full].concat(p.aliases).map(nkey).filter(Boolean);
+    const ex=S.people.find(q=>!q.trash&&[q.name,q.full].map(nkey).some(k=>k&&keys.includes(k)));
+    if(ex){
+      idMap[p.id]=ex.id;
+      // 今ある値は変えない。情報は、同じ文がなければ足す。空欄のメモ・本名だけ埋める
+      p.info.forEach(it=>{if(it.t&&!(ex.info||[]).some(x=>x.t===it.t)){ex.info=ex.info||[];ex.info.push(it)}});
+      if(!ex.memo&&p.memo)ex.memo=p.memo;
+      if(!ex.full&&p.full)ex.full=p.full;
+      st.merged++;
+    }else if(p.linkOnly){
+      st.skipped.push(dn(p));
+    }else{
+      const id='n'+uid(),mat={};
+      Object.keys(p.mat).forEach(k=>{const m=mapMat(k);if(m)mat[m]=1});
+      const np=Object.assign({},p,{id,mat});delete np.linkOnly;delete np.aliases;
+      S.people.push(np);S.hist[id]=[{d:today(),e:np.e,o:np.o}];idMap[p.id]=id;st.added++;
+    }
+  });
+  Object.keys(d.links||{}).forEach(k=>{
+    const [a,b]=k.split('|');
+    if(!idMap[a]||!idMap[b]){st.skippedLinks++;return}
+    if(idMap[a]===idMap[b])return;
+    const nk=lk(idMap[a],idMap[b]);
+    if(!S.links[nk]){S.links[nk]=Math.max(0,Math.min(100,Math.round(+d.links[k])||0));st.links++}
+    const note=(d.notes||{})[k];if(note&&!S.notes[nk])S.notes[nk]=String(note);
+  });
+  return st;
+}
+// 旧版(感情1〜5・機会0〜4)のデータを1〜100に直す
+function convertV2(d){
+  const o4=n=>Math.max(1,Math.round((+n||0)*25));
+  return {people:(d.people||[]).map(p=>({id:p.id,name:p.name,e:Math.round((+p.e||3)*20),o:o4((p.opp||[]).filter(Boolean).length),opp:p.opp,memo:p.memo})),
+    links:d.links,guide:d.guide,showLinks:d.showLinks,showTrail:d.showTrail,
+    hist:Object.keys(d.hist||{}).reduce((a,id)=>{a[id]=d.hist[id].map(h=>({d:h.d,e:Math.round(h.e*20),o:o4(h.o)}));return a},{})};
+}
+function restore(){
+  try{
+    const r=localStorage.getItem(KEY);
+    if(r){apply(JSON.parse(r));return}
+    const old=localStorage.getItem(KEY_OLD);
+    if(old){apply(convertV2(JSON.parse(old)));persist()}
+  }catch(e){}
+}
+
+/* ---------- 位置と軌跡 ---------- */
+const byId=id=>S.people.find(p=>p.id===id);
+const live=()=>S.people.filter(p=>!p.arch&&!p.trash);
+const alive=id=>{const p=byId(id);return !!p&&!p.arch&&!p.trash};
+// ある日付の時点の位置。その日以前の記録がなければ、まだ登場していない人
+function posAt(p){
+  if(!S.asOf)return {e:p.e,o:p.o};
+  let r=null;
+  (S.hist[p.id]||[]).forEach(x=>{if(x.d<=S.asOf)r=x});
+  return r?{e:r.e,o:r.o}:null;
+}
+function vis(){
+  if(!S.asOf)return live();
+  return S.people.filter(p=>posAt(p)&&!p.trash&&(!p.arch||String(p.archAt)>S.asOf));
+}
+const vid=id=>vis().some(p=>p.id===id);
+const daysBetween=(a,b)=>Math.round((new Date(b+'T00:00:00')-new Date(a+'T00:00:00'))/864e5);
+const dn=p=>p.name||p.full||'名前なし';
+// 検索と材料の絞り込み。条件がなければnull、あれば該当する人のid集合
+function matchSet(){
+  const t=S.qtext.trim().toLowerCase(),ms=S.qmats.filter(id=>S.mats.some(m=>m.id===id));
+  if(!t&&!ms.length)return null;
+  const out=new Set();
+  vis().forEach(p=>{
+    if(t){
+      const notes=Object.keys(S.notes).filter(k=>k.split('|').includes(p.id)).map(k=>S.notes[k]);
+      const names=S.mats.filter(m=>p.mat[m.id]).map(m=>m.name);
+      if(![p.name,p.full,p.memo].concat((p.info||[]).map(x=>x.t),notes,names).join(' ').toLowerCase().includes(t))return;
+    }
+    if(ms.length){const has=id=>!!p.mat[id];if(!(S.qmode==='any'?ms.some(has):ms.every(has)))return}
+    out.add(p.id);
+  });
+  return out;
+}
+function filterNote(){
+  const fm=matchSet();if(!fm)return'';
+  const parts=[],t=S.qtext.trim();
+  if(t)parts.push('「'+t+'」');
+  S.qmats.forEach(id=>{const m=S.mats.find(x=>x.id===id);if(m)parts.push(m.name)});
+  return '絞り込み：'+parts.join(S.qmode==='any'?' または ':' かつ ')+'（'+fm.size+'人）';
+}
+function renderSBox(){const open=S.qopen||!!S.qtext||S.qmats.length>0;$('drow').classList.toggle('hidden',!(open||S.asOf));$('sbox').classList.toggle('hidden',!open);$('b-q').setAttribute('aria-expanded',open?'true':'false');$('b-q').style.color=open?'var(--strong)':''}
+function renderSearch(){renderSBox();
+  S.qmats=S.qmats.filter(id=>S.mats.some(m=>m.id===id));
+  $('q-chips').innerHTML=S.mats.map(m=>'<button class="chip" data-chip="'+esc(m.id)+'" aria-pressed="'+(S.qmats.includes(m.id)?'true':'false')+'">'+esc(m.name)+'</button>').join('');
+  $('q-mode').classList.toggle('hidden',S.qmats.length<2);
+  [...$('q-mode').querySelectorAll('button')].forEach(b=>b.setAttribute('aria-pressed',String(b.getAttribute('data-qmode')===S.qmode)));
+  const fm=matchSet();
+  $('q-clear').classList.toggle('hidden',!fm);
+  $('q-found').innerHTML=fm?('<span class="fc">該当 '+fm.size+'人</span>'+S.people.filter(p=>fm.has(p.id)).map(p=>'<button class="chip" data-act="goto" data-id="'+esc(p.id)+'">'+esc(dn(p))+'</button>').join('')):'';
+}
+const lk=(a,b)=>a<b?a+'|'+b:b+'|'+a;
+const strength=(a,b)=>S.links[lk(a,b)]||0;
+function tierIndex(v){let k=0;S.guide.forEach((g,i)=>{if(g.s<=v)k=i});return k}
+const tierText=v=>S.guide[tierIndex(v)].t;
+const tierX=(n,v)=>{const a=S[GX[n].k];let k=0;a.forEach((g,i)=>{if(g.s<=v)k=i});return a[k].t};
+const tierAx=tierX;
+// 軌跡: 最後の点から設定した日数(初期値1日)以内の変更は、その点を上書きする
+function recordPos(p){
+  const h=S.hist[p.id]=S.hist[p.id]||[],l=h[h.length-1];
+  if(l&&daysBetween(l.d,today())<Math.max(1,S.trailGap)){l.e=p.e;l.o=p.o}else h.push({d:today(),e:p.e,o:p.o});
+}
+function ensureHist(){
+  S.people.forEach(p=>{const h=S.hist[p.id],l=h&&h[h.length-1];if(!l||l.e!==p.e||l.o!==p.o)recordPos(p)});
+}
+
+/* ---------- 「?」の説明 ---------- */
+function gxTable(n){
+  const a=S[GX[n].k];
+  return '<table><tr><th>値</th><th>目安</th></tr>'+a.map((g,i)=>{const e=i+1<a.length?a[i+1].s-1:g.s;return '<tr><td style="white-space:nowrap">'+(e>g.s?g.s+'〜'+e:g.s)+'</td><td>'+esc(g.t)+'</td></tr>'}).join('')+'</table>';
+}
+function helpData(key,v){
+  const H={
+   axisE:['横軸：大切にしたい（1〜100）','<p>あなたの<b>気持ち</b>の強さです。損得は考えず、気持ちだけで付けます。</p>'+gxTable('e')+'<p>マップの右にいるほど大きい値です。点をドラッグするか、詳細のスライダーで変えられます。</p>','ge'],
+   close:['自分との仲の良さ（1〜10）','<p>あなたとその人が、<b>どれだけ仲が良いか</b>です。マップでは<b>点の大きさと濃さ</b>で表します。大きく濃いほど仲が良い人です。</p>'+gxTable('c')+'<p>「大切にしたい」は気持ちの強さ、「自分との仲の良さ」は関係の近さです。別々に付けます。</p>','gc'],
+   want:['仲良くしたい（1〜10）','<p>あなたが、その人と<b>どれくらい仲良くなりたいか</b>の希望です。「自分との仲の良さ」と同じ1〜10で付けます。</p>'+gxTable('w')+'<p>「自分との仲の良さ」と比べて、マップの点にマークが付きます。</p><table><tr><th>マーク</th><th>意味</th></tr><tr><td>赤 ！</td><td>仲良くしたい が 自分との仲の良さ より大きい。希望に届いていないので、もっと関わるべきです。</td></tr><tr><td>緑 ✓</td><td>自分との仲の良さ が 仲良くしたい と同じか、それ以上。希望どおりの関係です。</td></tr></table>','gw'],
+   axisO:['縦軸：大切にすべき（1〜100）','<p>「この縁を活かすべきか」の度合いです。気持ちとは別に付けます。</p>'+gxTable('o')+'<p>詳細の中に、考える材料のチェックがあります。チェックは数値を自動では変えません。材料は設定で増やしたり変えたりできます。</p><table>'+S.mats.map(m=>'<tr><td>□</td><td>'+esc(m.name)+'</td></tr>').join('')+'</table><p>マップの上にいるほど大きい値です。</p>','go'],
+   links:['関係値強度','<p>知り合い同士の関係の強さを、あなたの主観で0〜100の数字にします。強いほど線が太く濃くなります。</p><p>0は「線なし」です。数字を0にすると、つながりを外します。スイッチで、線をマップに出すかどうかを選べます。点を選ぶと、その人の線はオレンジになり、数字が付きます。</p>'],
+   trail:['軌跡','<p>大切にしたい・大切にすべきの位置が、<b>1日ごとに1点</b>記録されます。同じ日に何度動かしても、その日の最後の位置が残ります。間隔は設定で、1週間・1か月にも変えられます。</p><p>人を選ぶと、その人の点がいつどこへ動いたかを、矢印と移動した年月日で表示します。選んでいないときは、全員の軌跡を薄く表示します。</p><p>消したい記録をタップすると、その横に「×」が出ます。開始の記録は消せません。点は、詳細の「軌跡」の欄の「×」で1つずつ、「この人の軌跡を消す」でまとめて消せます。消すときは、押したあとにもう一度押して確認します。</p>']
+  };
+  if(key==='strength'){
+    const cur=v==null?-1:tierIndex(v);
+    const rows=S.guide.map((g,i)=>{const e=i+1<S.guide.length?S.guide[i+1].s-1:g.s;
+      return '<tr class="'+(i===cur?'now':'')+'"><td style="white-space:nowrap">'+(e>g.s?g.s+'〜'+e:g.s)+'</td><td>'+esc(g.t)+'</td></tr>'}).join('');
+    return ['関係値強度（0〜100）','<p>あなたの主観で付ける数字です。'+(v==null?'':'いまは <b>'+v+'</b> で、色の付いた行に当たります。')+'</p><table><tr><th>範囲</th><th>目安</th></tr>'+rows+'</table>',true];
+  }
+  return H[key];
+}
+function openHelp(key,v){
+  const d=helpData(key,v);
+  $('help-t').textContent=d[0];$('help-b').innerHTML=d[1];$('help-set').classList.toggle('hidden',!d[2]);$('help-set').textContent='目安を変更する';$('help-set').setAttribute('data-acc',typeof d[2]==='string'?'acc-guide-'+d[2].slice(1):'acc-guide');
+  $('help').showModal();
+}
+
+/* ---------- マップ(画面と画像で同じ描画を使う) ---------- */
+const PAL={bg:'#0b0b0c',raised:'#121214',plot:'#0e0e10',line:'#26262a',grid:'#1a1a1d',strong:'#f2f2f3',ink:'#d6d6d9',muted:'#8a8a91',dot:'#6f6f76',noz:'#f26522',nozText:'#ff8a4c',good:'#34c17b',bad:'#ef4f4f'};
+const X0=-5,X1=105,Y0=-5,Y1=105;
+let LAY=null;
+let VIEW='pos';
+const isCW=()=>VIEW==='cw';
+function offsets(items){
+  const g={},out={};
+  items.forEach(it=>{(g[it.e+','+it.o]=g[it.e+','+it.o]||[]).push(it)});
+  Object.values(g).forEach(a=>{const n=a.length;a.forEach((it,i)=>{
+    if(n===1){out[it.id]=[0,0];return}
+    const r=7+n*2.5,ang=-Math.PI/2+2*Math.PI*i/n;out[it.id]=[Math.cos(ang)*r,Math.sin(ang)*r]})});
+  return out;
+}
+function buildSVG(o){
+  const {W,H,s,hdr,hits}=o,pal=PAL,cw=isCW();
+  const X0=cw?-.5:-5,X1=cw?10.5:105,Y0=X0,Y1=X1,TK=cw?[0,2,4,6,8,10]:[1,25,50,75,100],MID=cw?5:50;
+  const k=n=>n*s,f=n=>n.toFixed(1);
+  const top=hdr?hdr.h:0;
+  const ml=hits?k(30):k(40),mr=hits?k(8):k(12),mt=top+k(hits?8:12),mb=hits?k(20):k(38),pw=W-ml-mr,ph=H-mt-mb;
+  const px=v=>ml+(v-X0)/(X1-X0)*pw,py=v=>mt+(Y1-v)/(Y1-Y0)*ph;
+  if(hits)LAY={cw,W,H,px,py,ox:sx=>X0+(sx-ml)/pw*(X1-X0),ey:sy=>Y1-(sy-mt)/ph*(Y1-Y0)};
+  const V=vis(),PA={};V.forEach(p=>{PA[p.id]=cw?{e:p.c,o:p.w}:posAt(p)});
+  const off=offsets(V.map(p=>({id:p.id,e:PA[p.id].e,o:PA[p.id].o})));
+  const pos=id=>[px(PA[id].e)+off[id][0]*s,py(PA[id].o)+off[id][1]*s];
+  const sel=S.sel&&PA[S.sel]?S.sel:null;
+  const fm=matchSet();
+  const halo=' stroke="'+pal.plot+'" stroke-width="'+f(k(3))+'" paint-order="stroke" stroke-linejoin="round"';
+  const tx=(x,y,t,size,fill,extra)=>'<text x="'+f(x)+'" y="'+f(y)+'" font-size="'+f(k(size))+'" fill="'+fill+'" '+(extra||'')+'>'+t+'</text>';
+  let g='<rect width="'+W+'" height="'+H+'" fill="'+pal.bg+'"/>';
+  if(hdr){
+    g+=tx(ml,k(30),esc(hdr.title),17,pal.strong,'font-weight="500" letter-spacing="'+f(k(2))+'"');
+    g+=tx(ml,k(54),esc(hdr.stamp),12,pal.muted);
+    if(hdr.note)g+=tx(ml,k(72),esc(hdr.note),11,pal.ink);
+  }
+  g+='<rect x="'+f(ml)+'" y="'+f(mt)+'" width="'+f(pw)+'" height="'+f(ph)+'" fill="'+pal.plot+'" stroke="'+pal.line+'"/>';
+  if(cw){
+    // 対角線より上は「仲良くしたい」が大きい(もっと関わるべき)、下は希望どおり
+    const q=(x,y)=>f(px(x))+','+f(py(y));
+    g+='<polygon points="'+q(X0,X0)+' '+q(X0,Y1)+' '+q(X1,Y1)+'" fill="'+pal.bad+'" opacity=".07"/>';
+    g+='<polygon points="'+q(X0,X0)+' '+q(X1,X0)+' '+q(X1,Y1)+'" fill="'+pal.good+'" opacity=".07"/>';
+    g+='<line x1="'+f(px(X0))+'" y1="'+f(py(X0))+'" x2="'+f(px(X1))+'" y2="'+f(py(X1))+'" stroke="'+pal.muted+'" stroke-width="'+f(k(1))+'" stroke-dasharray="'+f(k(4))+' '+f(k(4))+'" opacity=".5"/>';
+  }
+  TK.forEach(v=>{
+    const mid=v===MID;
+    g+='<line x1="'+f(px(v))+'" x2="'+f(px(v))+'" y1="'+f(mt)+'" y2="'+f(mt+ph)+'" stroke="'+(mid?pal.line:pal.grid)+'"'+(mid?' stroke-dasharray="'+f(k(4))+' '+f(k(4))+'"':'')+'/>';
+    g+='<line x1="'+f(ml)+'" x2="'+f(ml+pw)+'" y1="'+f(py(v))+'" y2="'+f(py(v))+'" stroke="'+(mid?pal.line:pal.grid)+'"'+(mid?' stroke-dasharray="'+f(k(4))+' '+f(k(4))+'"':'')+'/>';
+    g+=tx(px(v),mt+ph+k(15),v,10,pal.muted,'text-anchor="middle"');
+    g+=tx(ml-k(7),py(v)+k(3.5),v,10,pal.muted,'text-anchor="end"');
+  });
+  if(!hits){
+  g+=tx(ml+pw/2,mt+ph+k(32),(cw?'自分との仲の良さ →':'大切にしたい →'),11,pal.muted,'text-anchor="middle" letter-spacing="'+f(k(1))+'"');
+  g+=tx(0,0,(cw?'仲良くしたい →':'大切にすべき →'),11,pal.muted,'text-anchor="middle" letter-spacing="'+f(k(1))+'" transform="translate('+f(k(11))+' '+f(mt+ph/2)+') rotate(-90)"');
+  }
+
+  if(sel){
+    const sp=PA[sel],gx=px(sp.e),gy=py(sp.o),dash=' stroke-dasharray="'+f(k(3))+' '+f(k(3))+'"';
+    g+='<line x1="'+f(gx)+'" x2="'+f(gx)+'" y1="'+f(gy)+'" y2="'+f(mt+ph)+'" stroke="'+pal.muted+'" stroke-width="'+f(k(1))+'" opacity=".6"'+dash+'/>';
+    g+='<line x1="'+f(ml)+'" x2="'+f(gx)+'" y1="'+f(gy)+'" y2="'+f(gy)+'" stroke="'+pal.muted+'" stroke-width="'+f(k(1))+'" opacity=".6"'+dash+'/>';
+    g+=tx(gx,mt+ph-k(6),sp.e,11,pal.ink,'text-anchor="middle" font-weight="500"'+halo);
+    g+=tx(ml+k(6),gy-k(5),sp.o,11,pal.ink,'font-weight="500"'+halo);
+  }
+  if(S.showLinks&&!cw){
+    const mids=[];
+    Object.keys(S.links).forEach(key=>{
+      const v=S.links[key];if(!v)return;
+      const [a,b]=key.split('|');if(!PA[a]||!PA[b])return;
+      const [x1,y1]=pos(a),[x2,y2]=pos(b),on=sel&&(a===sel||b===sel);
+      const w=k(.7+v/100*4.5),op=sel?(on?.95:.08):(.18+.5*v/100);
+      g+='<line x1="'+f(x1)+'" y1="'+f(y1)+'" x2="'+f(x2)+'" y2="'+f(y2)+'" stroke="'+(on?pal.noz:pal.muted)+'" stroke-width="'+f(w)+'" stroke-linecap="round" opacity="'+op+'"/>';
+      if(on)mids.push([(x1+x2)/2,(y1+y2)/2,v]);
+    });
+    mids.forEach(m=>{g+=tx(m[0],m[1]+k(4),m[2],10.5,pal.strong,'text-anchor="middle" font-weight="500"'+halo)});
+  }
+
+  function trail(id,faint){
+    const h=(S.hist[id]||[]).filter(x=>!S.asOf||x.d<=S.asOf);if(h.length<2)return'';
+    const col=faint?pal.muted:pal.strong,op=faint?.35:.9;
+    const pts=h.map(x=>[px(x.e),py(x.o),x.d]);
+    let r='';
+    for(let i=0;i<pts.length-1;i++){
+      const [x1,y1]=pts[i],[x2,y2]=pts[i+1],len=Math.hypot(x2-x1,y2-y1);if(len<3)continue;
+      const ux=(x2-x1)/len,uy=(y2-y1)/len,ex=x2-ux*k(9),ey=y2-uy*k(9),hs=k(6);
+      r+='<line x1="'+f(x1)+'" y1="'+f(y1)+'" x2="'+f(ex-ux*hs)+'" y2="'+f(ey-uy*hs)+'" stroke="'+col+'" stroke-width="'+f(k(1.3))+'" stroke-dasharray="'+f(k(4))+' '+f(k(3))+'" opacity="'+op+'"/>';
+      r+='<polygon points="'+f(ex)+','+f(ey)+' '+f(ex-ux*hs-uy*hs*.5)+','+f(ey-uy*hs+ux*hs*.5)+' '+f(ex-ux*hs+uy*hs*.5)+','+f(ey-uy*hs-ux*hs*.5)+'" fill="'+col+'" opacity="'+op+'"/>';
+    }
+    if(!faint){
+      const last=pts.length-1;
+      pts.forEach((q,i)=>{
+        const dm=q[2].split('-'),lab=(+dm[0])+'/'+(+dm[1])+'/'+(+dm[2]);
+        if(i<last)r+='<circle cx="'+f(q[0])+'" cy="'+f(q[1])+'" r="'+f(k(3.5))+'" fill="'+pal.plot+'" stroke="'+col+'" stroke-width="'+f(k(1.3))+'"/>';
+        r+=i<last?tx(q[0]+k(7),q[1]-k(6),lab,9.5,pal.ink,halo):tx(q[0],q[1]+k(24),lab,9.5,pal.ink,'text-anchor="middle"'+halo);
+      });
+    }
+    return r;
+  }
+  if(S.showTrail&&!cw){
+    if(sel)g+=trail(sel,false);
+    else V.forEach(p=>{g+=trail(p.id,true)});
+  }
+
+  V.forEach(p=>{
+    const [x,y]=pos(p.id);
+    const hm=fm&&fm.has(p.id),linked=sel&&strength(sel,p.id)>0,dim=fm?(!hm&&p.id!==sel):(sel&&p.id!==sel&&!linked);
+    g+='<g opacity="'+(dim?.25:1)+'">';
+    if(p.id===sel){
+      g+='<circle cx="'+f(x)+'" cy="'+f(y)+'" r="'+f(k(17))+'" fill="none" stroke="'+pal.noz+'" stroke-width="'+f(k(1))+'" opacity=".35"/>';
+      g+='<circle cx="'+f(x)+'" cy="'+f(y)+'" r="'+f(k(Math.max(11,dotR(p)+4)))+'" fill="none" stroke="'+pal.noz+'" stroke-width="'+f(k(2))+'"/>';
+    }else if(linked||hm)g+='<circle cx="'+f(x)+'" cy="'+f(y)+'" r="'+f(k(Math.max(9,dotR(p)+3)))+'" fill="none" stroke="'+pal.noz+'" stroke-width="'+f(k(1.3))+'" opacity=".8"/>';
+    // 仲の良さ: 大きく濃いほど親しい。0は未設定(標準の大きさ)
+    const dr=dotR(p),lo=Math.max(10,dr+3),dop=p.c>0?.3+p.c/10*.7:1;
+    g+='<circle cx="'+f(x)+'" cy="'+f(y)+'" r="'+f(k(dr))+'" fill="'+(p.id===sel||hm?pal.noz:(linked?pal.strong:pal.dot))+'" fill-opacity="'+dop.toFixed(2)+'"/>';
+    const cm=cmpOf(p);
+    if(cm){
+      const mx=x-k(7),my=y-k(7),mc=cm==='bad'?pal.bad:pal.good;
+      g+='<circle cx="'+f(mx)+'" cy="'+f(my)+'" r="'+f(k(4.2))+'" fill="'+mc+'"/>';
+      g+=cm==='bad'
+        ?'<path d="M'+f(mx)+' '+f(my-k(2.2))+'V'+f(my+k(.4))+'M'+f(mx)+' '+f(my+k(1.9))+'v'+f(k(.1))+'" stroke="#fff" stroke-width="'+f(k(1.4))+'" stroke-linecap="round" fill="none"/>'
+        :'<path d="M'+f(mx-k(2))+' '+f(my+k(.1))+'L'+f(mx-k(.5))+' '+f(my+k(1.6))+'L'+f(mx+k(2.2))+' '+f(my-k(1.6))+'" stroke="#fff" stroke-width="'+f(k(1.4))+'" stroke-linecap="round" stroke-linejoin="round" fill="none"/>';
+    }
+    const left=x>ml+pw*.8;
+    g+=tx(left?x-k(lo):x+k(lo),y+k(4),esc(dn(p)),11,p.id===sel?pal.strong:((linked||hm)?pal.strong:pal.ink),'text-anchor="'+(left?'end':'start')+'" font-weight="'+(p.id===sel?500:400)+'"'+halo);
+    g+='</g>';
+    if(hits){
+      // 表示名の文字の上も当たり判定にする(全角は1em、半角は約0.6em)
+      let tw=0;for(const ch of dn(p))tw+=ch.charCodeAt(0)>255?1:.6;
+      const lw=tw*k(11)+k(6),lx=left?x-k(lo)-lw+k(3):x+k(lo)-k(3);
+      g+='<rect class="hit" data-id="'+esc(p.id)+'" x="'+f(lx)+'" y="'+f(y-k(10))+'" width="'+f(lw)+'" height="'+f(k(20))+'" fill="transparent" style="cursor:grab;touch-action:none"/>';
+    }
+    if(hits)g+='<circle class="hit" data-id="'+esc(p.id)+'" cx="'+f(x)+'" cy="'+f(y)+'" r="'+f(k(16))+'" fill="transparent" style="cursor:grab;touch-action:none"/>';
+  });
+  return '<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" font-family="Noto Sans JP, Hiragino Sans, Yu Gothic UI, Meiryo, sans-serif">'+g+'</svg>';
+}
+function syncView(){
+  const cw=isCW(),bt=(l,h,t)=>l+t+'<button class="q" data-help="'+h+'" aria-label="軸の説明">?</button>';
+  const y=$('ax-y'),x=$('ax-x');
+  if(y.getAttribute('data-v')!==VIEW){
+    y.innerHTML=cw?bt('縦 ','want','仲良くしたい'):bt('縦 ','axisO','大切にすべき');
+    x.innerHTML=cw?bt('横 ','close','自分との仲の良さ'):bt('横 ','axisE','大切にしたい');
+    y.setAttribute('data-v',VIEW);
+  }
+  document.querySelectorAll('#v-seg button').forEach(b=>b.setAttribute('aria-pressed',b.getAttribute('data-view')===VIEW?'true':'false'));
+  $('t-links').closest('.lbl').classList.toggle('hidden',cw);$('t-trail').closest('.lbl').classList.toggle('hidden',cw);
+}
+function drawMap(){
+  syncView();
+  const box=$('map');
+  const W=Math.max(300,Math.floor(box.clientWidth||640));
+  const H=Math.round(Math.max(260,Math.min(W*.75,window.innerHeight-150)));
+  box.innerHTML=buildSVG({W,H,s:1,hdr:null,hits:true});
+  if(typeof wheelPaint==='function'&&$('wheel'))wheelPaint();
+}
+let raf=0;
+const drawSoon=()=>{if(!raf)raf=requestAnimationFrame(()=>{raf=0;drawMap()})};
+
+/* ---------- 画像を保存 ---------- */
+function download(blob,name){
+  const url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),2000);
+}
+function savePng(){
+  if(!vis().length){alert('保存する人がいません。');return}
+  const now=S.asOf?new Date(S.asOf+'T00:00:00'):new Date(),W=1200,H=860,sp=S.sel&&byId(S.sel);
+  const svg=buildSVG({W,H,s:1.5,hdr:{h:104,title:'People Positioning Map',stamp:S.asOf?now.getFullYear()+'年'+(now.getMonth()+1)+'月'+now.getDate()+'日 時点':fmtJP(now),note:[sp?'選択中：'+dn(sp):'',filterNote()].filter(Boolean).join('　')},hits:false});
+  const img=new Image();
+  img.onload=()=>{
+    const c=document.createElement('canvas');c.width=W*2;c.height=H*2;
+    c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+    c.toBlob(b=>{if(!b){alert('画像の生成に失敗しました。');return}download(b,ymd(now)+'_人物マップ.png')},'image/png');
+  };
+  img.onerror=()=>alert('画像の生成に失敗しました。');
+  img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+}
+
+/* ---------- 詳細パネル ---------- */
+function histLines(p,ro){
+  const all=S.hist[p.id]||[],h=ro?all.filter(x=>x.d<=S.asOf):all,last=h.length-1,out=[];
+  for(let i=last;i>=0;i--){
+    const b=h[i],a=h[i-1];let txt;
+    if(i===0)txt='記録の開始（大切にしたい '+b.e+'、大切にすべき '+b.o+'）';
+    else{
+      const parts=[];
+      if(a.e!==b.e)parts.push('大切にしたい '+a.e+'→'+b.e);
+      if(a.o!==b.o)parts.push('大切にすべき '+a.o+'→'+b.o);
+      txt=parts.length?parts.join('、'):'位置は同じ';
+    }
+    const del=!ro&&i>0&&i<last;
+    out.push('<li'+(del?' data-hrow="'+i+'" class="tap"':'')+'><time>'+fmtD(b.d)+'</time><span>'+txt+(i===last&&last>0?(ro?'（この日）':'（現在）'):'')+'</span>'+(del?'<button class="hx" data-hdel="'+i+'" aria-label="この記録を削除">×</button>':'')+'</li>');
+  }
+  return out.join('');
+}
+function linkRow(p,oid){
+  const o0=byId(oid),o={name:dn(o0)},v=strength(p.id,oid);
+  return '<div class="lrow" data-other="'+esc(oid)+'"><div class="l1"><button class="nm" data-act="goto" data-id="'+esc(oid)+'">'+esc(o.name)+'</button><span class="tier">'+esc(tierText(v))+'</span>'+
+   '<input class="snum" type="number" min="0" max="100" value="'+v+'" aria-label="'+esc(o.name)+'との関係値強度"><button class="q" data-help="strength" data-v="'+v+'" aria-label="説明">?</button></div>'+
+   '<input class="srange" type="range" min="0" max="100" value="'+v+'" aria-label="'+esc(o.name)+'との関係値強度">'+
+   '<input class="lmemo" type="text" maxlength="200" placeholder="この関係のメモ" value="'+esc(S.notes[lk(p.id,oid)]||'')+'" aria-label="この関係のメモ"></div>';
+}
+function tenBlock(label,help,idr,idn,val,tn){
+  return '<div class="ax"><div class="axh">'+label+'<button class="q" data-help="'+help+'" aria-label="説明">?</button><span class="axt" id="'+idr+'t">'+esc(tierX(tn,val))+'</span>'+
+   '<input class="big" id="'+idn+'" type="number" min="0" max="10" value="'+val+'" aria-label="'+label+'"></div>'+
+   '<input id="'+idr+'" type="range" min="0" max="10" step="1" value="'+val+'" aria-label="'+label+'"></div>';
+}
+const dotR=p=>p.c>0?2.5+p.c/10*6.5:4.5;
+// 仲良くしたい(w)と仲の良さ(c)を比べる。wが未設定なら比べない
+const cmpOf=p=>p.w>0?(p.w>p.c?'bad':'good'):'';
+function cmpHtml(p){const r=cmpOf(p);return r==='bad'?'<div class="hint" style="margin:4px 0 0;color:'+PAL.bad+'">！ もっと関わるべき（仲良くしたい '+p.w+' ＞ 仲の良さ '+p.c+'）</div>':r==='good'?'<div class="hint" style="margin:4px 0 0;color:'+PAL.good+'">✓ 希望どおりの関係（仲の良さ '+p.c+' ≧ 仲良くしたい '+p.w+'）</div>':''}
+function axisBlock(label,help,idr,idn,val,tn){
+  return '<div class="ax"><div class="axh">'+label+'<button class="q" data-help="'+help+'" aria-label="説明">?</button><span class="axt" id="'+idr+'t">'+esc(tierAx(tn,val))+'</span>'+
+   '<input class="big" id="'+idn+'" type="number" min="1" max="100" value="'+val+'" aria-label="'+label+'"></div>'+
+   '<input id="'+idr+'" type="range" min="1" max="100" value="'+val+'" aria-label="'+label+'"></div>';
+}
+const infoRows=p=>(p.info||[]).map((it,i)=>'<li>'+(it.d?'<time class="idate">'+fmtD(it.d)+'</time>':'')+'<input class="irow" data-i="'+i+'" value="'+esc(it.t)+'" maxlength="200" placeholder="例: 誕生日 5月3日" aria-label="情報 '+(i+1)+'" autocomplete="off"><button class="xbtn" data-act="delinfo" data-i="'+i+'" aria-label="この項目を消す">×</button></li>').join('');
+// 追加しただけで何も編集していない人(下書き)は、別の場所を押して選択が外れたら消す
+function dropDrafts(){
+  const d=S.people.filter(p=>p.draft&&p.id!==S.sel);if(!d.length)return;
+  d.forEach(p=>{delete S.hist[p.id]});
+  S.people=S.people.filter(p=>!(p.draft&&p.id!==S.sel));
+}
+function renderPanel(){dropDrafts();renderPanel0();fillRanges();$('panel').classList.toggle('hidden',!$('panel').innerHTML.trim())}
+function renderPanel0(){
+  const el=$('panel'),p=S.sel&&(S.asOf?vid(S.sel):alive(S.sel))?byId(S.sel):null;
+  if(S.asOf){
+    const when=fmtD(S.asOf);
+    if(!p){el.innerHTML='';return}
+    const pa=posAt(p);
+    el.innerHTML='<div class="ph"><span class="dn">'+esc(dn(p))+'</span><button class="xbtn" data-act="close" aria-label="選択を解除">×</button></div>'+
+      '<div class="dv"><span>大切にしたい</span><b>'+pa.e+'</b></div><div class="dv"><span>大切にすべき</span><b>'+pa.o+'</b></div>'+
+      '<div class="hint" style="margin:6px 0 0">'+esc(when)+' 時点の位置です。</div>'+
+      '<div class="sec"><h3 class="sh">この日までの軌跡</h3><ul class="hist">'+histLines(p,true)+'</ul></div>'+
+      '<div class="sec"><button class="btn" data-act="now">現在に戻して編集する</button></div>';
+    return;
+  }
+  if(!live().length){
+    el.innerHTML='<div class="empty">まだ誰も登録されていません。<br>「＋ 人を追加」から始めます。<div class="acts"><button class="btn main" data-act="new">＋ 人を追加</button></div></div>';
+    return;
+  }
+  if(!p){
+    el.innerHTML=LAST?'<div class="empty undo"><span>'+esc(LAST)+'</span>'+(LASTUNDO?'<button class="btn" data-act="untrash" data-id="'+esc(LASTUNDO)+'">元に戻す</button>':'')+'</div>':'';
+    return;
+  }
+  LAST='';LASTUNDO='';
+  const linked=live().filter(o=>o.id!==p.id&&strength(p.id,o.id)>0).sort((a,b)=>strength(p.id,b.id)-strength(p.id,a.id));
+  const free=live().filter(o=>o.id!==p.id&&!strength(p.id,o.id));
+  el.innerHTML=
+   '<div class="ph"><span class="dn" id="p-title">'+esc(dn(p))+'</span><button class="xbtn" data-act="close" aria-label="選択を解除">×</button></div>'+
+   '<div class="nms"><label class="fl">本名<input id="p-full" value="'+esc(p.full)+'" maxlength="60" placeholder="本名" autocomplete="off"></label>'+
+   '<label class="fl">表示名<input id="p-name" value="'+esc(p.name)+'" maxlength="40" placeholder="空欄なら本名" aria-label="表示名（空欄なら本名を表示）" autocomplete="off"></label></div>'+
+   '<div class="axs">'+axisBlock('大切にしたい','axisE','p-e','p-en',p.e,'e')+axisBlock('大切にすべき','axisO','p-o','p-on',p.o,'o')+'</div>'+
+   '<div class="axs">'+tenBlock('自分との仲の良さ','close','p-k','p-kn',p.c,'c')+tenBlock('仲良くしたい','want','p-w','p-wn',p.w,'w')+'</div><div id="p-cmp">'+cmpHtml(p)+'</div>'+
+   '<div class="sec" style="padding-top:8px;margin-top:8px">'+
+   '<div class="reasons"><div class="rl">考える材料（当てはまるもの）</div>'+
+   (S.mats.length?S.mats.map(m=>'<div class="chk"><label><input type="checkbox" class="p-c" data-id="'+esc(m.id)+'"'+(p.mat[m.id]?' checked':'')+'>'+esc(m.name)+'</label></div>').join(''):'<div class="hint" style="margin:0">材料がありません。設定で追加できます。</div>')+'</div></div>'+
+   '<div class="sec"><h3 class="sh">つながっている人（'+linked.length+'人）<button class="q" data-help="strength" aria-label="関係値強度の説明">?</button></h3>'+
+   (linked.length?linked.map(o=>linkRow(p,o.id)).join(''):'')+
+   (free.length?'<div class="addrow"><div class="al">新しくつなげる</div><select id="p-add" aria-label="つなげる人">'+free.map(o=>'<option value="'+esc(o.id)+'">'+esc(dn(o))+'</option>').join('')+'</select><button class="btn" data-act="addlink">つながりを追加</button></div>':'')+
+   '</div>'+
+   '<div class="sec"><h3 class="sh">情報</h3><ul class="info" id="p-info">'+infoRows(p)+'</ul><button class="btn" data-act="addinfo">＋ 項目を追加</button></div>'+
+   '<div class="sec"><h3 class="sh">メモ</h3><textarea id="p-memo" aria-label="メモ">'+esc(p.memo)+'</textarea></div>'+
+   '<div class="sec"><h3 class="sh">軌跡<button class="q" data-help="trail" aria-label="説明">?</button></h3><ul class="hist" id="p-hist">'+histLines(p)+'</ul><button class="del" data-act="clrtrail">軌跡を消す</button></div>'+
+   '<div class="sec" style="padding-top:6px"><button class="del" data-act="archive">アーカイブ</button><button class="del" data-act="delperson">削除</button></div>';
+}
+function fill(el){const mn=+el.min||0,mx=+el.max||100;el.style.setProperty('--p',((+el.value-mn)/(mx-mn)*100)+'%')}
+function fillRanges(){document.querySelectorAll('#panel input[type=range]').forEach(fill)}
+function syncPanel(p){
+  const set=(id,v)=>{const e=$(id);if(!e)return;if(document.activeElement!==e)e.value=v;if(e.type==='range')fill(e)};
+  set('p-k',p.c);set('p-kn',p.c);set('p-w',p.w);set('p-wn',p.w);{const a=$('p-kt'),b=$('p-wt');if(a)a.textContent=tierX('c',p.c);if(b)b.textContent=tierX('w',p.w)}{const c=$('p-cmp');if(c)c.innerHTML=cmpHtml(p)}set('p-e',p.e);set('p-en',p.e);set('p-o',p.o);set('p-on',p.o);{const a=$('p-et'),b=$('p-ot');if(a)a.textContent=tierAx('e',p.e);if(b)b.textContent=tierAx('o',p.o)}
+}
+function refreshHist(){const p=byId(S.sel),h=$('p-hist');if(p&&h)h.innerHTML=histLines(p)}
+
+/* ---------- 設定 ---------- */
+function renderMats(){
+  $('mat-rows').innerHTML=S.mats.map(m=>'<tr data-id="'+esc(m.id)+'"><td><input class="gt mn" value="'+esc(m.name)+'" aria-label="材料名"></td><td><button class="btn" data-mdel="'+esc(m.id)+'">削除</button></td></tr>').join('');
+}
+function commitMats(){
+  S.mats=[...document.querySelectorAll('#mat-rows tr')].map(tr=>({id:tr.getAttribute('data-id'),name:tr.querySelector('.mn').value.trim()||'材料'}));
+  persist();renderSearch();renderPanel();
+}
+function renderGX(n){
+  const X=GX[n];
+  $(X.rows).innerHTML=S[X.k].map((x,i)=>'<tr><td><input class="gs" type="number" min="'+X.lo+'" max="'+X.hi+'" value="'+x.s+'"'+(i===0?' disabled':'')+' aria-label="開始値"></td><td><input class="gt" value="'+esc(x.t)+'" aria-label="説明"></td><td>'+(i?'<button class="btn" data-gdelx="'+n+':'+i+'">削除</button>':'')+'</td></tr>').join('');
+}
+function commitGX(n){
+  const X=GX[n],rows=[...document.querySelectorAll('#'+X.rows+' tr')].map(tr=>({s:Math.max(X.lo,Math.min(X.hi,parseInt(tr.querySelector('.gs').value,10)||X.lo)),t:tr.querySelector('.gt').value.trim()||'(説明なし)'}));
+  rows[0].s=X.lo;
+  const seen={};
+  S[GX[n].k]=rows.sort((a,b)=>a.s-b.s).filter(r=>{if(seen[r.s])return false;seen[r.s]=1;return true});
+  persist();renderSet();renderPanel();
+}
+function renderSet(){
+  renderMats();renderGX('c');renderGX('w');renderGX('e');renderGX('o');
+  $('trail-gap').value=String(S.trailGap);
+  renderSync();renderArc();renderTrash();
+  if(typeof showUnmerge==='function')showUnmerge();
+  $('set-rows').innerHTML=S.guide.map((g,i)=>'<tr><td><input class="gs" type="number" min="0" max="100" value="'+g.s+'"'+(i===0?' disabled':'')+' aria-label="開始値"></td>'+
+    '<td><input class="gt" value="'+esc(g.t)+'" aria-label="説明"></td><td>'+(i?'<button class="btn" data-gdel="'+i+'">削除</button>':'')+'</td></tr>').join('');
+}
+function commitSet(){
+  const rows=[...document.querySelectorAll('#set-rows tr')].map(tr=>({s:Math.max(0,Math.min(100,parseInt(tr.querySelector('.gs').value,10)||0)),t:tr.querySelector('.gt').value.trim()||'(説明なし)'}));
+  rows[0].s=0;
+  const seen={};
+  S.guide=rows.sort((a,b)=>a.s-b.s).filter(r=>{if(seen[r.s])return false;seen[r.s]=1;return true});
+  persist();renderSet();renderPanel();
+}
+const setMsg=t=>{$('s-msg').textContent=t};
+
+/* ---------- サンプル ---------- */
+function loadSample(){
+  apply({people:[
+   {id:'at',name:'',full:'A.T',c:7,w:3,e:90,o:75,opp:[1,1,1,0],memo:'一緒に何かやりたい。'},{id:'km',name:'',full:'K.M',c:6,w:8,e:78,o:70,opp:[1,1,0,1],memo:''},
+   {id:'sy',name:'',full:'S.Y',c:10,w:6,e:95,o:8,opp:[0,0,0,0],memo:'損得なしで大切な人。'},{id:'rn',name:'',full:'R.N',c:8,w:9,e:80,o:20,opp:[0,0,0,1],memo:''},
+   {id:'mh',name:'',full:'M.H',c:3,w:8,e:35,o:95,opp:[1,1,1,1],memo:'仕事では頼れる。'},{id:'tk',name:'',full:'T.K',c:2,w:2,e:50,o:45,opp:[1,0,1,0],memo:''},
+   {id:'ys',name:'',full:'Y.S',c:0,w:0,e:30,o:10,opp:[0,0,0,0],memo:''},{id:'ho',name:'',full:'H.O',c:6,w:4,e:75,o:30,opp:[1,0,0,0],memo:''},{id:'ni',name:'',full:'N.I',c:4,w:7,e:55,o:72,opp:[0,1,1,1],memo:''}],
+   links:{'at|km':72,'at|sy':60,'at|mh':40,'km|rn':35,'rn|sy':90,'ho|sy':45,'mh|ni':55,'mh|tk':18,'ni|tk':25,'tk|ys':8,'km|ni':66,'ho|rn':30},
+   hist:{at:[{d:'2026-03-02',e:55,o:25},{d:'2026-07-18',e:75,o:50}],km:[{d:'2026-04-10',e:60,o:65}],sy:[{d:'2026-03-02',e:80,o:8}],
+         mh:[{d:'2026-05-01',e:75,o:45},{d:'2026-08-20',e:55,o:70}],ni:[{d:'2026-06-01',e:30,o:70}]},
+   notes:{'at|km':'同じプロジェクトで知り合った。','rn|sy':'昔からの付き合い。'},guide:S.guide,showLinks:true,showTrail:true});
+  S.sel='at';persist();$('t-links').checked=true;$('t-trail').checked=true;render();
+}
+
+/* ---------- イベント ---------- */
+function render(){renderSearch();renderArcBtn();renderDate();renderPanel();drawMap()}
+function renderDate(){
+  const el=$('q-date');el.max=today();
+  let mn='';S.people.forEach(p=>{(S.hist[p.id]||[]).forEach(x=>{if(!mn||x.d<mn)mn=x.d})});
+  if(mn)el.min=mn;
+  el.value=S.asOf;wheelPaint();
+  $('q-state').textContent=S.asOf?fmtD(S.asOf)+' 時点（閲覧のみ）'+(vis().length?'':'。この日に記録のある人はいません'):'最新（現在）を表示中';
+  $('q-state').title=S.asOf?'関係値強度の線、メモ、材料は現在の値です':'';
+  $('q-now').classList.toggle('hidden',!S.asOf);
+}
+function setAsOf(v){
+  S.asOf=v||'';
+  if(S.sel&&S.asOf&&!vid(S.sel))S.sel=null;
+  renderDate();renderSearch();renderPanel();drawMap();
+}
+function renderArcBtn(){
+  const n=S.people.filter(p=>p.arch&&!p.trash).length;$('arc-n').textContent=n?'（'+n+'）':'';
+  renderArc();renderTrash();
+}
+function renderTrash(){
+  const a=S.people.filter(p=>p.trash).sort((x,y)=>String(y.trashAt).localeCompare(String(x.trashAt)));
+  $('trash-list').innerHTML=a.length?a.map(p=>'<div class="arow"><div class="ai"><b>'+esc(dn(p))+'</b><div class="am">'+(p.trashAt?fmtD(p.trashAt)+' にゴミ箱へ':'')+(p.arch?'　（アーカイブ中だった人）':'')+(p.memo?'<br>'+esc(p.memo):'')+'</div></div><button class="btn" data-trestore="'+esc(p.id)+'">戻す</button><button class="btn" data-pdel="'+esc(p.id)+'">完全に削除</button></div>').join(''):'<p>ゴミ箱は空です。</p>';
+  $('trash-empty').classList.toggle('hidden',!a.length);
+  $('trash-n').textContent=a.length?'（'+a.length+'）':'';
+}
+function renderArc(){
+  const a=S.people.filter(p=>p.arch&&!p.trash).sort((x,y)=>String(y.archAt).localeCompare(String(x.archAt)));
+  $('arc-list').innerHTML=a.length?a.map(p=>'<div class="arow"><div class="ai"><b>'+esc(dn(p))+'</b><div class="am">'+(p.archAt?fmtD(p.archAt)+' にアーカイブ':'')+(p.full&&p.name?'　本名：'+esc(p.full):'')+(p.memo?'<br>'+esc(p.memo):'')+'</div></div><button class="btn" data-restore="'+esc(p.id)+'">戻す</button><button class="btn" data-ptrash="'+esc(p.id)+'">ゴミ箱へ</button></div>').join(''):'<p>アーカイブした人はいません。</p>';
+}
+function select(id){S.sel=id;renderPanel();drawMap()}
+function addPerson(){
+  if(S.asOf){S.asOf='';renderDate()}
+  const id='n'+uid(),p={id,name:'',full:'新しい人',e:50,o:50,c:0,w:0,info:[],mat:{},memo:'',draft:true};
+  S.people.push(p);recordPos(p);select(id);
+  const n=$('p-full');if(n){n.focus();n.select()}
+  if($('panel').scrollIntoView)$('panel').scrollIntoView({behavior:'smooth',block:'start'});
+}
+// 2回押しの確認は、別の場所を押したら元に戻す
+function arm(el,txt){
+  el.setAttribute('data-orig',el.textContent);
+  el.setAttribute('data-ostyle',el.getAttribute('style')||'');
+  el.textContent=txt;el.setAttribute('data-ok','1');
+}
+function disarm(except){
+  document.querySelectorAll('[data-ok="1"]').forEach(el=>{
+    if(except&&el===except)return;
+    if(el.hasAttribute('data-orig'))el.textContent=el.getAttribute('data-orig');
+    const st=el.getAttribute('data-ostyle');
+    if(st)el.setAttribute('style',st);else el.removeAttribute('style');
+    el.removeAttribute('data-ok');el.removeAttribute('data-orig');el.removeAttribute('data-ostyle');
+  });
+}
+['pointerdown','click'].forEach(type=>document.addEventListener(type,ev=>{
+  const t=ev.target;disarm(t.closest&&t.closest('[data-ok="1"]'));
+},true));
+document.addEventListener('click',ev=>{
+  const t=ev.target;
+  const q=t.closest&&t.closest('[data-help]');
+  if(q){const key=q.getAttribute('data-help'),v=q.getAttribute('data-v');openHelp(key,v==null?null:+v);return}
+  const hd=t.closest&&t.closest('[data-hdel]');
+  if(hd){
+    if(hd.getAttribute('data-ok')!=='1'){arm(hd,'消す？');hd.style.color='var(--noz-text)';hd.style.fontSize='12px';return}
+    const p=byId(S.sel);if(p&&S.hist[p.id]){S.hist[p.id].splice(+hd.getAttribute('data-hdel'),1);persist();refreshHist();drawMap()}return}
+  const hr=t.closest&&t.closest('#p-hist li[data-hrow]');
+  if(hr){
+    const open=hr.classList.contains('open');
+    document.querySelectorAll('#p-hist li.open').forEach(x=>x.classList.remove('open'));
+    if(!open)hr.classList.add('open');
+    return;
+  }
+  const rs=t.closest&&t.closest('[data-restore]');
+  if(rs){const p=byId(rs.getAttribute('data-restore'));if(p){p.arch=false;p.archAt='';persist();renderArc();renderArcBtn();renderSearch();renderPanel();drawMap()}return}
+  const tr=t.closest&&t.closest('[data-trestore]');
+  if(tr){const p=byId(tr.getAttribute('data-trestore'));if(p){p.trash=false;p.trashAt='';persist();renderTrash();renderArc();renderArcBtn();renderSearch();renderPanel();drawMap()}return}
+  const pt=t.closest&&t.closest('[data-ptrash]');
+  if(pt){const p=byId(pt.getAttribute('data-ptrash'));if(p){p.trash=true;p.trashAt=today();persist();renderArc();renderArcBtn();renderSearch();drawMap()}return}
+  const pd=t.closest&&t.closest('[data-pdel]');
+  if(pd){
+    if(pd.getAttribute('data-ok')!=='1'){arm(pd,'もう一度押すと完全に削除');return}
+    const id=pd.getAttribute('data-pdel');
+    S.people=S.people.filter(x=>x.id!==id);
+    Object.keys(S.links).forEach(key=>{if(key.split('|').includes(id))delete S.links[key]});
+    Object.keys(S.notes).forEach(key=>{if(key.split('|').includes(id))delete S.notes[key]});
+    delete S.hist[id];persist();renderTrash();renderArc();renderArcBtn();renderSearch();return;
+  }
+  const a=t.closest&&t.closest('[data-act]');
+  if(a){
+    const act=a.getAttribute('data-act'),p=S.sel&&byId(S.sel);
+    if(act==='close')select(null);
+    if(act==='now'){S.asOf='';render()}
+    if(act==='new')addPerson();
+    if(act==='sample')loadSample();
+    if(act==='goto')select(a.getAttribute('data-id'));
+    if(p&&p.draft&&(act==='addlink'||act==='addinfo'))delete p.draft;
+    if(act==='addlink'&&p){S.links[lk(p.id,$('p-add').value)]=1;persist();renderPanel();drawMap()}
+    if(act==='archive'&&p){
+      p.arch=true;p.archAt=today();
+      LAST='「'+dn(p)+'」をアーカイブしました。設定の「アーカイブ保管庫」から戻せます。';
+      persist();select(null);renderSearch();renderArcBtn();
+    }
+    if(act==='delperson'&&p){
+      const id=p.id,nm=dn(p);
+      if(p.draft){S.people=S.people.filter(x=>x.id!==id);delete S.hist[id];LAST='';select(null);renderSearch();renderArcBtn();return}
+      p.trash=true;p.trashAt=today();
+      LAST='「'+nm+'」をゴミ箱に入れました。設定の「ゴミ箱」から戻せます。';LASTUNDO=id;
+      persist();select(null);renderSearch();renderArcBtn();
+    }
+    if(act==='untrash'){
+      const q=byId(a.getAttribute('data-id'));
+      LAST='';LASTUNDO='';
+      if(q&&q.trash){q.trash=false;q.trashAt='';persist();renderArcBtn();renderSearch();select(q.id)}
+      else renderPanel();
+    }
+    if(act==='addinfo'&&p){
+      p.info=p.info||[];p.info.push({t:'',d:today()});persist();renderPanel();
+      const rows=document.querySelectorAll('#p-info .irow');if(rows.length)rows[rows.length-1].focus();
+    }
+    if(act==='delinfo'&&p){
+      if(a.getAttribute('data-ok')!=='1'){arm(a,'消す？');return}
+      p.info.splice(+a.getAttribute('data-i'),1);persist();renderPanel();
+    }
+    if(act==='clrtrail'&&p){
+      if(a.getAttribute('data-ok')!=='1'){arm(a,'もう一度押すと、この人の軌跡を消します');return}
+      S.hist[p.id]=[{d:today(),e:p.e,o:p.o}];persist();renderPanel();drawMap();
+    }
+    return;
+  }
+  const ch=t.closest&&t.closest('[data-chip]');
+  if(ch){const id=ch.getAttribute('data-chip');S.qmats=S.qmats.includes(id)?S.qmats.filter(x=>x!==id):S.qmats.concat(id);renderSearch();drawMap();return}
+  const qm=t.closest&&t.closest('[data-qmode]');
+  if(qm){S.qmode=qm.getAttribute('data-qmode');renderSearch();drawMap();return}
+  const md=t.closest&&t.closest('[data-mdel]');
+  if(md){
+    if(md.getAttribute('data-ok')!=='1'){arm(md,'もう一度押すと削除');return}
+    const id=md.getAttribute('data-mdel');
+    S.mats=S.mats.filter(m=>m.id!==id);S.people.forEach(p=>{delete p.mat[id]});
+    persist();renderMats();renderSearch();renderPanel();drawMap();return;
+  }
+  const gx=t.closest&&t.closest('[data-gdelx]');
+  if(gx){const [n,i]=gx.getAttribute('data-gdelx').split(':');S[GX[n].k].splice(+i,1);persist();renderSet();renderPanel();return}
+  const gd=t.closest&&t.closest('[data-gdel]');
+  if(gd){S.guide.splice(+gd.getAttribute('data-gdel'),1);persist();renderSet();renderPanel()}
+});
+
+// 点のドラッグ。動かさずに離したときは、選択の切り替えとして扱う
+let drag=null;
+const mapBox=$('map');
+function toSvg(ev){
+  const svg=mapBox.querySelector('svg'),r=svg.getBoundingClientRect();
+  return [(ev.clientX-r.left)*(LAY.W/r.width),(ev.clientY-r.top)*(LAY.H/r.height)];
+}
+mapBox.addEventListener('touchstart',ev=>{if(ev.target.closest&&ev.target.closest('.hit'))ev.preventDefault()},{passive:false});
+mapBox.addEventListener('pointerdown',ev=>{
+  const h=ev.target.closest&&ev.target.closest('.hit');if(!h||!LAY)return;
+  const id=h.getAttribute('data-id'),p=byId(id);if(!p)return;
+  const [sx,sy]=toSvg(ev);
+  drag={id,pid:ev.pointerId,gx:sx-LAY.px(LAY.cw?p.c:p.e),gy:sy-LAY.py(LAY.cw?p.w:p.o),x0:ev.clientX,y0:ev.clientY,moved:false,noDrag:!!S.asOf,was:S.sel===id};
+  try{mapBox.setPointerCapture(ev.pointerId)}catch(e){}
+});
+mapBox.addEventListener('pointermove',ev=>{
+  if(!drag||ev.pointerId!==drag.pid||drag.noDrag)return;
+  if(!drag.moved){
+    if(Math.hypot(ev.clientX-drag.x0,ev.clientY-drag.y0)<5)return;
+    drag.moved=true;
+    {const dp=byId(drag.id);if(dp&&dp.draft)delete dp.draft}
+    if(S.sel!==drag.id){S.sel=drag.id;renderPanel()}
+  }
+  const p=byId(drag.id),[sx,sy]=toSvg(ev);
+  if(LAY.cw){const c10=v=>Math.max(0,Math.min(10,Math.round(v)));p.c=c10(LAY.ox(sx-drag.gx));p.w=c10(LAY.ey(sy-drag.gy))}
+  else{p.e=clamp(LAY.ox(sx-drag.gx));p.o=clamp(LAY.ey(sy-drag.gy));recordPos(p)}
+  syncPanel(p);drawSoon();
+});
+let lastEnd=0;
+mapBox.addEventListener('click',ev=>{if(Date.now()-lastEnd<500)return;if(ev.target.closest&&ev.target.closest('.hit'))return;if(S.sel)select(null)});
+function endDrag(ev,cancel){
+  if(!drag||ev.pointerId!==drag.pid)return;
+  lastEnd=Date.now();
+  const d=drag;drag=null;
+  if(d.moved){persist();refreshHist();drawMap()}
+  else if(!cancel)select(d.was?null:d.id);
+}
+mapBox.addEventListener('pointerup',ev=>endDrag(ev,false));
+mapBox.addEventListener('pointercancel',ev=>endDrag(ev,true));
+
+$('panel').addEventListener('input',ev=>{
+  const t=ev.target,p=byId(S.sel);if(!p)return;
+  if(p.draft)delete p.draft;
+  if(t.id==='p-name'){p.name=t.value.trim();const tt=$('p-title');if(tt)tt.textContent=dn(p);persist();drawMap();return}
+  if(t.id==='p-full'){p.full=t.value.trim();const tt=$('p-title');if(tt)tt.textContent=dn(p);persist();drawMap();return}
+  if(t.classList.contains('lmemo')){S.notes[lk(p.id,t.closest('.lrow').getAttribute('data-other'))]=t.value;persist();return}
+  if(t.id==='p-memo'){p.memo=t.value;persist();return}
+  if(t.classList.contains('irow')){p.info[+t.getAttribute('data-i')].t=t.value;persist();return}
+  const tk={'p-k':'c','p-kn':'c','p-w':'w','p-wn':'w'}[t.id];
+  if(tk){
+    if(t.value==='')return;
+    p[tk]=Math.max(0,Math.min(10,parseInt(t.value,10)||0));
+    const r=$(tk==='c'?'p-k':'p-w'),n=$(tk==='c'?'p-kn':'p-wn');if(t!==r)r.value=p[tk];if(t!==n)n.value=p[tk];fill(r);
+    {const tt=$(tk==='c'?'p-kt':'p-wt');if(tt)tt.textContent=tierX(tk,p[tk])}
+    $('p-cmp').innerHTML=cmpHtml(p);
+    persist();drawMap();return;
+  }
+  const ax={'p-e':'e','p-en':'e','p-o':'o','p-on':'o'}[t.id];
+  if(ax){
+    if(t.value==='')return;
+    p[ax]=clamp(parseInt(t.value,10));recordPos(p);
+    const r=$(ax==='e'?'p-e':'p-o'),n=$(ax==='e'?'p-en':'p-on');
+    if(t!==r)r.value=p[ax];
+    if(t!==n)n.value=p[ax];
+    fill(r);{const tt=$(r.id+'t');if(tt)tt.textContent=tierAx(ax,p[ax])}
+    persist();drawMap();return;
+  }
+  const row=t.closest('.lrow');
+  if(row&&(t.classList.contains('srange')||t.classList.contains('snum'))){
+    const v=Math.max(0,Math.min(100,parseInt(t.value,10)||0));
+    S.links[lk(p.id,row.getAttribute('data-other'))]=v;
+    row.querySelector('.srange').value=v;fill(row.querySelector('.srange'));
+    if(t.classList.contains('srange'))row.querySelector('.snum').value=v;
+    row.querySelector('.tier').textContent=tierText(v);
+    row.querySelector('.q').setAttribute('data-v',v);
+    persist();drawMap();
+  }
+});
+$('panel').addEventListener('change',ev=>{
+  const t=ev.target,p=byId(S.sel);if(!p)return;
+  if(p.draft)delete p.draft;
+  if(['p-k','p-kn','p-w','p-wn'].includes(t.id)){syncPanel(p);return}
+  if(['p-e','p-en','p-o','p-on'].includes(t.id)){syncPanel(p);refreshHist();return}
+  if(t.classList.contains('p-c')){const id=t.getAttribute('data-id');if(t.checked)p.mat[id]=1;else delete p.mat[id];persist();renderSearch();drawMap();return}
+  if(t.classList.contains('srange')||t.classList.contains('snum'))renderPanel();
+});
+$('b-add').onclick=addPerson;
+$('b-png').onclick=savePng;
+$('b-set').onclick=()=>{setMsg('');renderSet();document.querySelectorAll('#set .acc').forEach(x=>{x.open=false});$('set').showModal()};
+$('help-x').onclick=()=>$('help').close();
+$('help-set').onclick=()=>{const acc=$('help-set').getAttribute('data-acc')||'acc-guide';$('help').close();setMsg('');renderSet();document.querySelectorAll('#set .acc').forEach(x=>{x.open=false});$(acc).open=true;$('set').showModal()};
+$('set-x').onclick=()=>$('set').close();
+$('set-add').onclick=()=>{const m=Math.max(...S.guide.map(g=>g.s));S.guide.push({s:Math.min(99,m+10),t:'新しい説明'});commitSet()};
+$('set-reset').onclick=()=>{S.guide=cloneGuide();persist();renderSet();renderPanel()};
+$('set-rows').addEventListener('change',commitSet);
+['c','w','e','o'].forEach(n=>{
+  $(GX[n].rows).addEventListener('change',()=>commitGX(n));
+  $('g'+n+'-add').onclick=()=>{const a=S[GX[n].k],m=Math.max(...a.map(g=>g.s));a.push({s:Math.min(GX[n].hi,m+GX[n].step),t:'新しい説明'});commitGX(n)};
+  $('g'+n+'-reset').onclick=()=>{S[GX[n].k]=cloneGX(n);persist();renderSet();renderPanel()};
+});
+$('mat-rows').addEventListener('change',commitMats);
+$('q-date').addEventListener('change',e=>setAsOf(e.target.value));
+// 日付ホイール: 上へ回すと1日ずつ過去へ、下へ回すと現在へ
+const wheel=$('wheel'),TICK=8;
+const addDays=(d,n)=>{const t=new Date(d+'T00:00:00');t.setDate(t.getDate()+n);return ymd(t)};
+function earliest(){let mn='';S.people.forEach(p=>{(S.hist[p.id]||[]).forEach(x=>{if(!mn||x.d<mn)mn=x.d})});return mn}
+function wheelOff(){return S.asOf?Math.max(0,daysBetween(S.asOf,today())):0}
+function wheelStep(n){
+  const mn=earliest();if(!mn)return;
+  const max=Math.max(0,daysBetween(mn,today()));
+  const off=Math.max(0,Math.min(max,wheelOff()+n));
+  setAsOf(off===0?'':addDays(today(),-off));
+}
+function wheelPaint(){
+  const off=wheelOff(),mn=earliest(),max=mn?Math.max(0,daysBetween(mn,today())):0;
+  wheel.setAttribute('aria-valuetext',S.asOf?fmtD(S.asOf):'現在');
+  const W=64,H=Math.max(180,Math.round(wheel.clientHeight||200)),cx=W/2,cy=H/2,tx0=18,tx1=46,top=24,bot=H-24,half=(bot-top)/2,SP=13;
+  const C={line:'#26262a',dim:'#6f6f76',ink:'#d6d6d9',noz:'#f26522'};
+  let g='<rect x="'+tx0+'" y="'+top+'" width="'+(tx1-tx0)+'" height="'+(bot-top)+'" fill="#0c0c0d" stroke="'+C.dim+'" stroke-opacity=".6"/>';
+  for(let m=Math.max(0,off-40);m<=Math.min(max,off+40);m++){
+    const r=(m-off)*SP,u=Math.max(-1,Math.min(1,r/half));
+    if(Math.abs(r)>half)continue;
+    const y=cy+half*Math.sin(u*Math.PI/2),t=Math.abs(u),wk=m%7===0;
+    const len=(wk?22:12)*(1-t*.75),op=(1-t*.7)*(wk?1:.55);
+    if(m===off)continue;
+    g+='<line x1="'+(cx-len/2).toFixed(1)+'" x2="'+(cx+len/2).toFixed(1)+'" y1="'+y.toFixed(1)+'" y2="'+y.toFixed(1)+'" stroke="'+C.ink+'" stroke-opacity="'+op.toFixed(2)+'" stroke-width="'+(wk?1.6:1)+'"/>';
+  }
+  for(let m=Math.max(0,off-60);m<=Math.min(max,off+60);m++){
+    const y=cy+(m-off)*6;if(y<top-4||y>bot+4)continue;
+    g+='<line x1="4" x2="'+(m%7===0?11:8)+'" y1="'+y.toFixed(1)+'" y2="'+y.toFixed(1)+'" stroke="'+C.dim+'"/><line x1="'+(W-4)+'" x2="'+(W-(m%7===0?11:8))+'" y1="'+y.toFixed(1)+'" y2="'+y.toFixed(1)+'" stroke="'+C.dim+'"/>';
+  }
+  g+='<line x1="'+tx0+'" x2="'+tx1+'" y1="'+cy+'" y2="'+cy+'" stroke="'+C.noz+'" stroke-width="2"/>';
+  g+='<polygon points="2,'+(cy-5)+' 2,'+(cy+5)+' 9,'+cy+'" fill="'+C.noz+'"/><polygon points="'+(W-2)+','+(cy-5)+' '+(W-2)+','+(cy+5)+' '+(W-9)+','+cy+'" fill="'+C.noz+'"/>';
+  g+='<polygon points="'+(cx-6)+',16 '+(cx+6)+',16 '+cx+',8" fill="'+C.dim+'"/><polygon points="'+(cx-6)+','+(H-16)+' '+(cx+6)+','+(H-16)+' '+cx+','+(H-8)+'" fill="'+C.dim+'"/>';
+  g+='<path d="M1 7V1h6M'+(W-7)+' 1h6v6M1 '+(H-7)+'v6h6M'+(W-7)+' '+(H-1)+'h6v-6" transform="translate(0 0)" fill="none" stroke="'+C.dim+'" stroke-opacity=".7"/>';
+  wheel.innerHTML='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" aria-hidden="true">'+g+'</svg>';
+}
+let wd=null;
+wheel.addEventListener('touchstart',ev=>ev.preventDefault(),{passive:false});
+wheel.addEventListener('pointerdown',ev=>{wd={pid:ev.pointerId,y:ev.clientY,acc:0};try{wheel.setPointerCapture(ev.pointerId)}catch(e){}});
+wheel.addEventListener('pointermove',ev=>{
+  if(!wd||ev.pointerId!==wd.pid)return;
+  wd.acc+=ev.clientY-wd.y;wd.y=ev.clientY;
+  const n=Math.trunc(wd.acc/TICK);
+  if(n){wd.acc-=n*TICK;wheelStep(-n)}
+});
+const wend=ev=>{if(wd&&ev.pointerId===wd.pid){wd=null}};
+wheel.addEventListener('pointerup',wend);wheel.addEventListener('pointercancel',wend);
+wheel.addEventListener('wheel',ev=>{ev.preventDefault();wheelStep((ev.deltaY>0?1:-1)*Math.max(1,Math.round(Math.abs(ev.deltaY)/60)))},{passive:false});
+wheel.addEventListener('keydown',ev=>{
+  const m={ArrowDown:1,ArrowUp:-1,PageDown:7,PageUp:-7}[ev.key];
+  if(m){ev.preventDefault();wheelStep(m)}
+});
+$('q-now').onclick=()=>setAsOf('');
+let saveT=0;
+$('b-save').onclick=()=>{
+  const lab=$('b-save').querySelector('span'),ok=persist();
+  lab.textContent=ok?'保存しました':'保存できませんでした';
+  clearTimeout(saveT);saveT=setTimeout(()=>{lab.textContent='保存';closeMenu()},1200);
+};
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')persist();else syncNow()});
+window.addEventListener('pagehide',()=>{persist()});
+$('b-home').onclick=()=>{S.sel=null;S.asOf='';S.qtext='';S.qmats=[];S.qopen=false;$('q-text').value='';render();window.scrollTo(0,0)};
+$('b-q').onclick=()=>{const open=S.qopen||!!S.qtext||S.qmats.length>0;if(open){S.qopen=false;S.qtext='';S.qmats=[];$('q-text').value='';renderSearch();drawMap()}else{S.qopen=true;renderSBox();$('q-text').focus()}};
+$('b-help').onclick=()=>$('about').showModal();
+$('about-x').onclick=()=>$('about').close();
+$('trash-empty').onclick=ev=>{
+  const b=ev.currentTarget;
+  if(b.getAttribute('data-ok')!=='1'){arm(b,'もう一度押すと、ゴミ箱の中を全て完全に削除します');return}
+  disarm();
+  const ids=new Set(S.people.filter(p=>p.trash).map(p=>p.id));
+  S.people=S.people.filter(p=>!ids.has(p.id));
+  Object.keys(S.links).forEach(k=>{if(k.split('|').some(x=>ids.has(x)))delete S.links[k]});
+  Object.keys(S.notes).forEach(k=>{if(k.split('|').some(x=>ids.has(x)))delete S.notes[k]});
+  ids.forEach(id=>{delete S.hist[id]});
+  persist();renderTrash();renderArcBtn();renderSearch();
+};
+$('trail-gap').onchange=e=>{S.trailGap=+e.target.value;persist()};
+$('s-trail').onclick=ev=>{
+  const b=ev.currentTarget;
+  if(b.getAttribute('data-ok')!=='1'){arm(b,'もう一度押すと全員の軌跡を消します');return}
+  S.people.forEach(p=>{S.hist[p.id]=[{d:today(),e:p.e,o:p.o}]});persist();
+  disarm();renderPanel();drawMap();
+};
+$('mat-add').onclick=()=>{S.mats.push({id:'m'+uid(),name:'新しい材料'});persist();renderMats();renderSearch();renderPanel()};
+$('q-text').addEventListener('input',e=>{S.qtext=e.target.value;renderSearch();drawMap()});
+$('q-clear').onclick=()=>{S.qtext='';S.qmats=[];$('q-text').value='';renderSearch();drawMap()};
+$('s-export').onclick=()=>{
+  const body=JSON.stringify({app:'positioning-map',exportedAt:new Date().toISOString(),data:snapshot()},null,1);
+  download(new Blob([body],{type:'application/json'}),today()+'_人物マップ_バックアップ.json');
+  setMsg('バックアップを書き出しました。');
+};
+$('s-import').onclick=()=>$('s-file').click();
+const showUnmerge=()=>{let has=false;try{has=!!localStorage.getItem(MERGE_BAK)}catch(e){}$('s-unmerge').classList.toggle('hidden',!has)};
+$('s-merge').onclick=()=>$('s-mfile').click();
+$('s-mfile').onchange=ev=>{
+  const f=ev.target.files[0];if(!f)return;
+  const rd=new FileReader();
+  rd.onload=()=>{
+    try{
+      const d=JSON.parse(String(rd.result)),data=d.data||d;
+      if(!data||!Array.isArray(data.people)){setMsg('読み込めませんでした。このアプリのバックアップではありません。');return}
+      const before=JSON.stringify(snapshot());
+      const st=mergeIn(data);
+      if(!st){setMsg('読み込めませんでした。');return}
+      try{localStorage.setItem(MERGE_BAK,before)}catch(e){}
+      S.sel=null;persist();renderSet();render();showUnmerge();
+      let m='追加 '+st.added+'人、すでにいた人 '+st.merged+'人（情報だけ足しました）、つながり '+st.links+'件を追加しました。今のデータは、そのまま残っています。';
+      if(st.skipped.length)m+=' 「'+st.skipped.join('」「')+'」は見つからなかったため、その人とのつながり '+st.skippedLinks+'件は入れていません。';
+      setMsg(m);
+    }catch(e){setMsg('読み込めませんでした。ファイルが壊れている可能性があります。')}
+  };
+  rd.readAsText(f,'utf-8');ev.target.value='';
+};
+$('s-unmerge').onclick=ev=>{
+  const b=ev.currentTarget;
+  if(b.getAttribute('data-ok')!=='1'){arm(b,'もう一度押すと、追加する前の状態に戻します');return}
+  disarm();
+  let bak=null;try{bak=localStorage.getItem(MERGE_BAK)}catch(e){}
+  if(!bak){showUnmerge();return}
+  try{if(apply(JSON.parse(bak))){S.sel=null;persist();try{localStorage.removeItem(MERGE_BAK)}catch(e){}renderSet();render();showUnmerge();setMsg('追加で読み込む前の状態に戻しました。')}}
+  catch(e){setMsg('戻せませんでした。')}
+};
+$('s-file').onchange=ev=>{
+  const f=ev.target.files[0];if(!f)return;
+  const rd=new FileReader();
+  rd.onload=()=>{
+    try{
+      const d=JSON.parse(String(rd.result)),data=d.data||d;
+      if(!apply(data.v===2?convertV2(data):data)){setMsg('読み込めませんでした。このアプリのバックアップではありません。');return}
+      S.sel=null;persist();renderSet();render();setMsg('読み込みました。現在のデータは置き換わっています。');
+    }catch(e){setMsg('読み込めませんでした。ファイルが壊れている可能性があります。')}
+  };
+  rd.readAsText(f,'utf-8');ev.target.value='';
+};
+$('s-sample').onclick=ev=>{
+  const b=ev.currentTarget;
+  if(b.getAttribute('data-ok')!=='1'){arm(b,'もう一度押すと、今のデータをサンプルに置き換えます');return}
+  disarm();loadSample();renderSet();setMsg('サンプルを入れました。');
+};
+$('s-wipe').onclick=ev=>{
+  const b=ev.currentTarget;
+  if(b.getAttribute('data-ok')!=='1'){arm(b,'もう一度押すと全て削除します');return}
+  apply({people:[],links:{},hist:{},guide:cloneGuide()});S.sel=null;persist();
+  disarm();renderSet();render();setMsg('全データを削除しました。');
+};
+['help','set','about'].forEach(id=>$(id).addEventListener('click',ev=>{if(ev.target===$(id))$(id).close()}));
+const MKEY='positioning-map.maint';
+// メンテナンスモード: 保存先をサンプル用に切り替える。本物のデータには触れない
+function setMaint(on,switching){
+  if(switching)persist();
+  S.maint=!!on;KEY=S.maint?KEY_SAMPLE:KEY_REAL;
+  if(switching){
+    try{localStorage.setItem(MKEY,on?'1':'0')}catch(e){}
+    S.sel=null;S.asOf='';S.qtext='';S.qmats=[];S.qopen=false;$('q-text').value='';
+    let r=null;try{r=localStorage.getItem(KEY)}catch(e){}
+    if(r&&apply(JSON.parse(r))){}
+    else if(S.maint)loadSample();
+    else apply({people:[],links:{},hist:{},guide:cloneGuide()});
+    $('t-links').checked=S.showLinks;$('t-trail').checked=S.showTrail;
+    histReset();
+  }
+  $('s-maint').checked=S.maint;$('s-sample').classList.toggle('hidden',!S.maint);$('mbar').classList.toggle('hidden',!S.maint);
+}
+$('s-maint').onchange=e=>{setMaint(e.target.checked,true);renderSet();render();setMsg('')};
+document.querySelectorAll('#v-seg button').forEach(b=>{b.onclick=()=>{VIEW=b.getAttribute('data-view')==='cw'?'cw':'pos';drawMap()}});
+$('t-links').onchange=e=>{S.showLinks=e.target.checked;persist();drawMap()};
+$('t-trail').onchange=e=>{S.showTrail=e.target.checked;persist();drawMap()};
+
+function histGo(dir){
+  const from=dir<0?HIST.u:HIST.r,to=dir<0?HIST.r:HIST.u;if(!from.length)return;
+  to.push(JSON.stringify(snapshot()));
+  const prev=from.pop();
+  if(!apply(JSON.parse(prev)))return;
+  HIST.cur=JSON.stringify(snapshot());HIST.t=0;
+  if(S.sel&&!S.people.some(p=>p.id===S.sel&&!p.trash))S.sel=null;
+  persist();$('t-links').checked=S.showLinks;$('t-trail').checked=S.showTrail;
+  render();histUi();
+}
+$('b-undo').onclick=()=>histGo(-1);
+$('b-redo').onclick=()=>histGo(1);
+document.addEventListener('keydown',ev=>{
+  if(!(ev.ctrlKey||ev.metaKey)||ev.altKey)return;
+  const t=ev.target;if(t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.isContentEditable))return;
+  if($('set').open||$('help').open||$('about').open)return;
+  const k=(ev.key||'').toLowerCase();
+  if(k==='z'&&!ev.shiftKey){ev.preventDefault();histGo(-1)}else if(k==='y'||(k==='z'&&ev.shiftKey)){ev.preventDefault();histGo(1)}
+});
+
+/* ---------- メニュー ---------- */
+const menuEl=$('menu'),menuBtn=$('b-menu');
+function closeMenu(){menuEl.classList.add('hidden');menuBtn.setAttribute('aria-expanded','false')}
+menuBtn.onclick=ev=>{ev.stopPropagation();const open=menuEl.classList.contains('hidden');menuEl.classList.toggle('hidden',!open);menuBtn.setAttribute('aria-expanded',open?'true':'false')};
+menuEl.addEventListener('click',ev=>{if(ev.target.closest&&ev.target.closest('#b-save'))return;closeMenu()});
+document.addEventListener('pointerdown',ev=>{if(!menuEl.classList.contains('hidden')&&!(ev.target.closest&&ev.target.closest('.menuwrap')))closeMenu()});
+document.addEventListener('keydown',ev=>{if(ev.key==='Escape'&&!menuEl.classList.contains('hidden')){closeMenu();menuBtn.focus()}});
+
+let rt;
+const redraw=()=>{clearTimeout(rt);rt=setTimeout(drawMap,60)};
+if('ResizeObserver' in window)new ResizeObserver(redraw).observe(mapBox);else window.addEventListener('resize',redraw);
+
+/* ---------- 端末間の同期(Supabase。ログインした人の分だけ、1人1行で保存) ---------- */
+// 公開用の鍵(anon)。データはログインした本人の行にしか読み書きできない(supabase/setup.sql)
+const SUPA_URL='https://tkxfnoemouhwwuopuaqm.supabase.co',SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRreGZub2Vtb3Vod3d1b3B1YXFtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM0NjAxMzYsImV4cCI6MjEwOTAzNjEzNn0.e3BeXqxMi7G6d7R3j-bVG4S7dgL6rHFCFiBZmK3QmBg';
+const MKEY_SYNC='positioning-map.sync';
+const getMeta=()=>{try{return Object.assign({rev:'',dirty:false},JSON.parse(localStorage.getItem(MKEY_SYNC)||'{}'))}catch(e){return {rev:'',dirty:false}}};
+const setMeta=m=>{try{localStorage.setItem(MKEY_SYNC,JSON.stringify(m))}catch(e){}};
+const SYNC={msg:'',conflict:null,busy:false};
+const hhmm=()=>{const d=new Date();return pad(d.getHours())+':'+pad(d.getMinutes())};
+function markDirty(){
+  const m=getMeta();if(!m.dirty){m.dirty=true;setMeta(m)}
+  if(SB&&SUSER&&!SYNC.conflict){clearTimeout(syncTimer);syncTimer=setTimeout(syncNow,1500)}
+}
+function setSync(t){SYNC.msg=t;renderSync()}
+function renderSync(){
+  const el=$('sync-box');if(!el)return;
+  const msg=SYNC.msg?'<p style="font-size:12px;color:var(--muted)">'+esc(SYNC.msg)+'</p>':'';
+  const note=S.maint?'<p style="font-size:12px;color:var(--muted)">メンテナンスモード中は、同期しません。</p>':'';
+  let h;
+  if(!SUPA_URL)h='<p>同期は準備中です。クラウドの設定がまだ登録されていません。</p>';
+  else if(!SB)h='<p>読み込み中…</p>'+msg;
+  else if(!SUSER)h='<p>ログインすると、別の端末でも同じデータを使えます。データはあなたのログインでだけ読み書きできます。</p><div class="acts l"><button class="btn main" data-sy="login">Googleでログイン</button></div>'+msg;
+  else if(SYNC.conflict)h='<p>ログイン中: '+esc(SUSER.email||'')+'</p>'+msg+'<div class="acts l"><button class="btn" data-sy="keeplocal">この端末の内容を使う（クラウドを上書き）</button><button class="btn" data-sy="keepcloud">クラウドの内容を使う（この端末を置き換え）</button></div>';
+  else h='<p>ログイン中: '+esc(SUSER.email||'')+'</p>'+msg+'<div class="acts l"><button class="btn" data-sy="now">今すぐ同期</button><button class="btn" data-sy="logout">ログアウト</button></div>';
+  el.innerHTML=h+note;
+}
+function applyRemote(row){
+  noDirty=true;
+  try{if(!apply(row.data))throw new Error('クラウドのデータが読めません');S.sel=null;persist()}finally{noDirty=false}
+  setMeta({rev:row.updated_at,dirty:false});histReset();
+  $('t-links').checked=S.showLinks;$('t-trail').checked=S.showTrail;
+  render();setSync('クラウドの内容を読み込みました '+hhmm());
+}
+async function push(rev){
+  const payload={data:snapshot(),updated_at:new Date().toISOString()};
+  let r=null;
+  if(rev){
+    const {data,error}=await SB.from('people_map').update(payload).eq('user_id',SUSER.id).eq('updated_at',rev).select('updated_at');
+    if(error)throw error;r=data&&data[0];
+  }else{
+    const {data,error}=await SB.from('people_map').insert(Object.assign({user_id:SUSER.id},payload)).select('updated_at');
+    if(error&&error.code!=='23505')throw error;r=data&&data[0];
+  }
+  if(!r){SYNC.busy=false;return syncNow()}
+  setMeta({rev:r.updated_at,dirty:false});setSync('同期済み '+hhmm());
+}
+async function syncNow(){
+  if(!SB||!SUSER||S.maint||SYNC.busy||SYNC.conflict)return;
+  SYNC.busy=true;setSync('同期中…');
+  try{
+    const {data:row,error}=await SB.from('people_map').select('data,updated_at').maybeSingle();
+    if(error)throw error;
+    const m=getMeta(),unsynced=m.dirty||(!m.rev&&S.people.length>0);
+    if(!row)await push('');
+    else if(m.rev===row.updated_at){if(m.dirty)await push(m.rev);else setSync('同期済み '+hhmm())}
+    else if(!unsynced)applyRemote(row);
+    else{
+      SYNC.conflict=row;setSync('この端末とクラウドで内容が違います。どちらを使うか選んでください。');
+      if(!$('set').open){setMsg('');renderSet();document.querySelectorAll('#set .acc').forEach(x=>{x.open=false});$('acc-sync').open=true;$('set').showModal()}
+    }
+  }catch(e){setSync('同期できません（'+(e.message||e)+'）。通信できるときにやり直します。')}
+  finally{SYNC.busy=false}
+}
+$('sync-box').addEventListener('click',async ev=>{
+  const b=ev.target.closest&&ev.target.closest('[data-sy]');if(!b||!SB)return;
+  const a=b.getAttribute('data-sy');
+  if((a==='keeplocal'||a==='keepcloud')&&b.getAttribute('data-ok')!=='1'){arm(b,'もう一度押すと確定します');return}
+  if(a==='login'){const {error}=await SB.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin+location.pathname}});if(error)setSync('ログインできません（'+error.message+'）')}
+  else if(a==='logout'){await SB.auth.signOut();SYNC.conflict=null;setSync('ログアウトしました。この端末のデータは残っています。')}
+  else if(a==='now')syncNow();
+  else if(a==='keepcloud'){const row=SYNC.conflict;SYNC.conflict=null;applyRemote(row)}
+  else if(a==='keeplocal'){const row=SYNC.conflict;SYNC.conflict=null;SYNC.busy=true;try{await push(row.updated_at)}catch(e){setSync('同期できません（'+(e.message||e)+'）')}finally{SYNC.busy=false}}
+});
+function initSync(){
+  renderSync();
+  if(!SUPA_URL||!SUPA_KEY)return;
+  const boot=()=>{
+    SB=window.supabase.createClient(SUPA_URL,SUPA_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+    SB.auth.onAuthStateChange((ev,sess)=>{SUSER=sess?sess.user:null;renderSync();if(SUSER)setTimeout(syncNow,0)});
+    setInterval(()=>{if(document.visibilityState==='visible')syncNow()},60000);
+  };
+  if(window.supabase){boot();return}
+  const sc=document.createElement('script');
+  sc.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js';
+  sc.onload=boot;sc.onerror=()=>setSync('同期の部品を読み込めません。通信を確認してください。');
+  document.head.appendChild(sc);
+}
+
+{let m=false;try{m=localStorage.getItem(MKEY)==='1'}catch(e){}
+ setMaint(m,false);
+ if(m){let r=null;try{r=localStorage.getItem(KEY)}catch(e){}if(r)restore();else loadSample()}else restore()}
+$('t-links').checked=S.showLinks;$('t-trail').checked=S.showTrail;
+histReset();
+render();
+initSync();
+try{
+  try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
+  if('serviceWorker' in navigator && location.protocol!=='file:'){navigator.serviceWorker.register('sw.js').catch(function(){})}
+}catch(e){}
+})();
+</script>
+</body>
+</html>
