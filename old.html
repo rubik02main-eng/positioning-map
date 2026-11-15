@@ -220,6 +220,7 @@ dialog::backdrop{background:rgba(0,0,0,.65)}
 </head>
 <body>
 <div class="wrap">
+  <div id="cbar" class="hidden" style="font-size:13px;margin-bottom:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span>この端末とクラウドで内容が違います。</span><button class="btn" id="cbar-go">選ぶ</button></div>
   <div id="mbar" class="hidden" style="font-size:12px;color:var(--muted);margin-bottom:8px">サンプルを表示中（あなたのデータは保存されています）</div>
   <div class="top">
     <div class="tg">
@@ -1404,6 +1405,7 @@ function renderSync(){
   else if(SYNC.conflict)h='<p>ログイン中: '+esc(SUSER.email||'')+'</p>'+msg+'<div class="acts l"><button class="btn" data-sy="keeplocal">この端末の内容を使う（クラウドを上書き）</button><button class="btn" data-sy="keepcloud">クラウドの内容を使う（この端末を置き換え）</button></div>';
   else h='<p>ログイン中: '+esc(SUSER.email||'')+'</p>'+msg+'<div class="acts l"><button class="btn" data-sy="now">今すぐ同期</button><button class="btn" data-sy="logout">ログアウト</button></div>';
   el.innerHTML=h+note;
+  const cb=$('cbar');if(cb)cb.classList.toggle('hidden',!SYNC.conflict);
 }
 function applyRemote(row){
   noDirty=true;
@@ -1437,11 +1439,12 @@ async function syncNow(){
     else if(!unsynced)applyRemote(row);
     else{
       SYNC.conflict=row;setSync('この端末とクラウドで内容が違います。どちらを使うか選んでください。');
-      if(!$('set').open){setMsg('');renderSet();document.querySelectorAll('#set .acc').forEach(x=>{x.open=false});$('acc-sync').open=true;$('set').showModal()}
+      $('cbar').classList.remove('hidden');
     }
   }catch(e){setSync('同期できません（'+(e.message||e)+'）。通信できるときにやり直します。')}
   finally{SYNC.busy=false}
 }
+$('cbar-go').onclick=()=>{setMsg('');renderSet();document.querySelectorAll('#set .acc').forEach(x=>{x.open=false});$('acc-sync').open=true;$('set').showModal()};
 $('sync-box').addEventListener('click',async ev=>{
   const b=ev.target.closest&&ev.target.closest('[data-sy]');if(!b||!SB)return;
   const a=b.getAttribute('data-sy');
